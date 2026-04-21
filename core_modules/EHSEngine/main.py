@@ -25,6 +25,7 @@ import traceback
 from fastapi import FastAPI, HTTPException
 
 from consumer.amqp_consumer import AMQPConsumer
+from consumer.mqtt_consumer import MQTTConsumer
 from evaluator.engine_evaluator import EHSEngineEvaluator
 from persistence.influx_writer import InfluxWriter
 from publisher.alert_publisher import AlertPublisher
@@ -42,7 +43,45 @@ def load_config() -> dict:
     config_path = os.path.join(_BASE_DIR, "config.yaml")
     print(f"[Config] Loading from: {config_path}")
     with open(config_path, "r") as f:
-        return yaml.safe_load(f)["ehs_engine"]
+        config = yaml.safe_load(f)["ehs_engine"]
+
+    # Optional deployment-time overrides. Defaults remain unchanged for local runs.
+    rabbitmq_cfg = config.get("rabbitmq", {})
+    mqtt_cfg = config.get("mqtt", {})
+    influx_cfg = config.get("influxdb", {})
+
+    rabbitmq_cfg["host"] = os.getenv("EHS_RABBITMQ_HOST", rabbitmq_cfg.get("host", "localhost"))
+    rabbitmq_cfg["port"] = int(os.getenv("EHS_RABBITMQ_PORT", rabbitmq_cfg.get("port", 5672)))
+    rabbitmq_cfg["username"] = os.getenv("EHS_RABBITMQ_USERNAME", rabbitmq_cfg.get("username", "guest"))
+    rabbitmq_cfg["password"] = os.getenv("EHS_RABBITMQ_PASSWORD", rabbitmq_cfg.get("password", "guest"))
+    rabbitmq_cfg["exchange"] = os.getenv("EHS_RABBITMQ_EXCHANGE", rabbitmq_cfg.get("exchange", "smartcity"))
+    rabbitmq_cfg["subscribe_queue"] = os.getenv(
+        "EHS_RABBITMQ_SUBSCRIBE_QUEUE",
+        rabbitmq_cfg.get("subscribe_queue", "ehs_telemetry_queue"),
+    )
+    rabbitmq_cfg["subscribe_binding_key"] = os.getenv(
+        "EHS_RABBITMQ_SUBSCRIBE_BINDING_KEY",
+        rabbitmq_cfg.get("subscribe_binding_key", "telemetry.enviro.#"),
+    )
+    rabbitmq_cfg["publish_topic"] = os.getenv(
+        "EHS_RABBITMQ_PUBLISH_TOPIC",
+        rabbitmq_cfg.get("publish_topic", "alerts.critical"),
+    )
+
+    mqtt_cfg["broker_host"] = os.getenv("EHS_MQTT_BROKER_HOST", mqtt_cfg.get("broker_host", "localhost"))
+    mqtt_cfg["broker_port"] = int(os.getenv("EHS_MQTT_BROKER_PORT", mqtt_cfg.get("broker_port", 1883)))
+    mqtt_cfg["topic"] = os.getenv("EHS_MQTT_TOPIC", mqtt_cfg.get("topic", "smartcity/telemetry/ehs"))
+    mqtt_cfg["client_id"] = os.getenv("EHS_MQTT_CLIENT_ID", mqtt_cfg.get("client_id", "ehs_engine_subscriber"))
+
+    influx_cfg["url"] = os.getenv("EHS_INFLUXDB_URL", influx_cfg.get("url", "http://localhost:8086"))
+    influx_cfg["token"] = os.getenv("EHS_INFLUXDB_TOKEN", influx_cfg.get("token", "dev-token-replace-in-production"))
+    influx_cfg["org"] = os.getenv("EHS_INFLUXDB_ORG", influx_cfg.get("org", "smartcity"))
+    influx_cfg["bucket"] = os.getenv("EHS_INFLUXDB_BUCKET", influx_cfg.get("bucket", "ehs_telemetry"))
+
+    config["rabbitmq"] = rabbitmq_cfg
+    config["mqtt"] = mqtt_cfg
+    config["influxdb"] = influx_cfg
+    return config
 
 
 # ─────────────────────────────────────────────
@@ -83,10 +122,11 @@ app = FastAPI(
 )
 
 # Global references for dependency injection into routes
-_evaluator: EHSEngineEvaluator = None
-_consumer:  AMQPConsumer       = None
-_influx:    InfluxWriter       = None
-_publisher: AlertPublisher     = None
+_evaluator:     EHSEngineEvaluator = None
+_consumer:      AMQPConsumer       = None
+_mqtt_consumer: MQTTConsumer       = None
+_influx:        InfluxWriter       = None
+_publisher:     AlertPublisher     = None
 
 
 @app.on_event("startup")
@@ -95,7 +135,7 @@ def startup_event():
     Startup lifecycle hook — wires all components.
     Uses @app.on_event which is proven to work (same pattern as IngestionEngine).
     """
-    global _evaluator, _consumer, _influx, _publisher
+    global _evaluator, _consumer, _mqtt_consumer, _influx, _publisher
 
     try:
         print("=" * 55)
@@ -152,8 +192,20 @@ def startup_event():
         )
         _consumer.start_listening()
 
+        # 7. Start MQTT consumer for direct IoT Generator integration
+        mqtt_cfg = config.get("mqtt", {})
+        _mqtt_consumer = MQTTConsumer(
+            evaluator=_evaluator,
+            broker_host=mqtt_cfg.get("broker_host", "localhost"),
+            broker_port=mqtt_cfg.get("broker_port", 1883),
+            topic=mqtt_cfg.get("topic", "smartcity/telemetry/ehs"),
+            client_id=mqtt_cfg.get("client_id", "ehs_engine_subscriber"),
+        )
+        _mqtt_consumer.start_listening()
+
         print("[Main] EHS Engine fully operational on port 8002")
-        print("[Main] Subscribed to: telemetry.enviro.#")
+        print("[Main] AMQP subscribed to: telemetry.enviro.#")
+        print("[Main] MQTT subscribed to: smartcity/telemetry/ehs")
         print("[Main] Publishing alerts to: alerts.critical")
         print("=" * 55)
 
@@ -166,6 +218,8 @@ def startup_event():
 def shutdown_event():
     """Clean up connections on service shutdown."""
     print("[Main] Shutting down EHS Engine...")
+    if _mqtt_consumer:
+        _mqtt_consumer.stop()
     if _influx:
         _influx.close()
     if _publisher:
@@ -203,9 +257,13 @@ async def health_check():
         "status": "healthy",
         "service": "ehs_engine",
         "member": "Saicharan (Team Member 2)",
-        "subscribed_topic": "telemetry.enviro.#",
+        "protocols": {
+            "amqp_topic": "telemetry.enviro.#",
+            "amqp_connected": _consumer._connected if _consumer else False,
+            "mqtt_topic": "smartcity/telemetry/ehs",
+            "mqtt_connected": _mqtt_consumer._connected if _mqtt_consumer else False,
+        },
         "alert_topic": "alerts.critical",
-        "rabbitmq_connected": _consumer._connected if _consumer else False,
         "ml_strategy": type(_evaluator._predictor).__name__ if _evaluator else "not loaded",
     }
 

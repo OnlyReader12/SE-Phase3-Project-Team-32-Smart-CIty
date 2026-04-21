@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingestion-engine
+  namespace: smartcity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingestion-engine
+  template:
+    metadata:
+      labels:
+        app: ingestion-engine
+    spec:
+      containers:
+        - name: ingestion-engine
+          image: smartcity/ingestion-engine:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+            - containerPort: 1883
+          env:
+            - name: MIDDLEWARE_INGEST_URL
+              value: http://persistent-middleware:8001/middleware/ingest
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 8
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingestion-engine
+  namespace: smartcity
+spec:
+  selector:
+    app: ingestion-engine
+  ports:
+    - name: http-api
+      port: 8000
+      targetPort: 8000
+    - name: mqtt
+      port: 1883
+      targetPort: 1883

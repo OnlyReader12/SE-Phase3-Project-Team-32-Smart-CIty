@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - rabbitmq.yaml
+  - influxdb.yaml
+  - persistent-middleware.yaml
+  - ingestion-engine.yaml
+  - ehs-engine.yaml
+  - energy-engine.yaml
+  - alerting-engine.yaml
+  - privacy-rbac.yaml

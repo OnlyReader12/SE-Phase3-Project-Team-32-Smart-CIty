@@ -1,0 +1,147 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: smartcity-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - smartcity
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: smartcity-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: adminadmin
+      DOCKER_INFLUXDB_INIT_ORG: smartcity
+      DOCKER_INFLUXDB_INIT_BUCKET: ehs_telemetry
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: dev-token-replace-in-production
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - smartcity
+
+  persistent-middleware:
+    build:
+      context: ../core_modules/PersistentMiddleware
+    container_name: smartcity-persistent-middleware
+    ports:
+      - "8001:8001"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_EXCHANGE: smartcity_exchange
+      SQLALCHEMY_DATABASE_URL: sqlite:////data/edge_persistence.db
+    volumes:
+      - middleware_data:/data
+    depends_on:
+      - rabbitmq
+    networks:
+      - smartcity
+
+  ingestion-engine:
+    build:
+      context: ../core_modules/IngestionEngine
+    container_name: smartcity-ingestion-engine
+    ports:
+      - "8000:8000"
+      - "1883:1883"
+    environment:
+      MIDDLEWARE_INGEST_URL: http://persistent-middleware:8001/middleware/ingest
+    depends_on:
+      - persistent-middleware
+    networks:
+      - smartcity
+
+  ehs-engine:
+    build:
+      context: ../core_modules/EHSEngine
+    container_name: smartcity-ehs-engine
+    ports:
+      - "8002:8002"
+    environment:
+      EHS_RABBITMQ_HOST: rabbitmq
+      EHS_RABBITMQ_PORT: "5672"
+      EHS_RABBITMQ_USERNAME: guest
+      EHS_RABBITMQ_PASSWORD: guest
+      EHS_RABBITMQ_EXCHANGE: smartcity_exchange
+      EHS_RABBITMQ_SUBSCRIBE_BINDING_KEY: telemetry.ehs.#
+      EHS_MQTT_BROKER_HOST: ingestion-engine
+      EHS_MQTT_BROKER_PORT: "1883"
+      EHS_MQTT_TOPIC: smartcity/telemetry/ehs
+      EHS_INFLUXDB_URL: http://influxdb:8086
+      EHS_INFLUXDB_TOKEN: dev-token-replace-in-production
+      EHS_INFLUXDB_ORG: smartcity
+      EHS_INFLUXDB_BUCKET: ehs_telemetry
+    depends_on:
+      - rabbitmq
+      - influxdb
+      - ingestion-engine
+    networks:
+      - smartcity
+
+  energy-engine:
+    build:
+      context: ../core_modules/EnergyEngine
+    container_name: smartcity-energy-engine
+    ports:
+      - "8003:8003"
+    environment:
+      ENERGY_RABBITMQ_HOST: rabbitmq
+      ENERGY_RABBITMQ_PORT: "5672"
+      ENERGY_RABBITMQ_USERNAME: guest
+      ENERGY_RABBITMQ_PASSWORD: guest
+      ENERGY_RABBITMQ_EXCHANGE: smartcity_exchange
+      ENERGY_RABBITMQ_SUBSCRIBE_BINDING_KEY: telemetry.energy.#
+    depends_on:
+      - rabbitmq
+    networks:
+      - smartcity
+
+  alerting-engine:
+    build:
+      context: ../core_modules/AlertingEngine
+    container_name: smartcity-alerting-engine
+    ports:
+      - "8004:8004"
+    environment:
+      ALERTING_RABBITMQ_HOST: rabbitmq
+      ALERTING_RABBITMQ_PORT: "5672"
+      ALERTING_RABBITMQ_USERNAME: guest
+      ALERTING_RABBITMQ_PASSWORD: guest
+      ALERTING_RABBITMQ_EXCHANGE: smartcity_exchange
+      ALERTING_RABBITMQ_SUBSCRIBE_BINDING_KEY: alerts.#
+      ALERTING_NOTIFICATION_GATEWAY: mock
+    depends_on:
+      - rabbitmq
+    networks:
+      - smartcity
+
+  privacy-rbac:
+    build:
+      context: ../core_modules/PrivacyRBACService
+    container_name: smartcity-privacy-rbac
+    ports:
+      - "8005:8005"
+    environment:
+      PRIVACY_API_BASE: http://privacy-rbac:8005
+      PRIVACY_RABBITMQ_HOST: rabbitmq
+      PRIVACY_RABBITMQ_PORT: "5672"
+    depends_on:
+      - rabbitmq
+    networks:
+      - smartcity
+
+networks:
+  smartcity:
+    name: smartcity-network
+
+volumes:
+  influxdb_data:
+  middleware_data:

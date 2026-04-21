@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alerting-engine
+  namespace: smartcity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alerting-engine
+  template:
+    metadata:
+      labels:
+        app: alerting-engine
+    spec:
+      containers:
+        - name: alerting-engine
+          image: smartcity/alerting-engine:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8004
+          env:
+            - name: ALERTING_RABBITMQ_HOST
+              value: rabbitmq
+            - name: ALERTING_RABBITMQ_PORT
+              value: "5672"
+            - name: ALERTING_RABBITMQ_USERNAME
+              value: guest
+            - name: ALERTING_RABBITMQ_PASSWORD
+              value: guest
+            - name: ALERTING_RABBITMQ_EXCHANGE
+              value: smartcity_exchange
+            - name: ALERTING_RABBITMQ_SUBSCRIBE_BINDING_KEY
+              value: alerts.#
+            - name: ALERTING_NOTIFICATION_GATEWAY
+              value: mock
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 8
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alerting-engine
+  namespace: smartcity
+spec:
+  selector:
+    app: alerting-engine
+  ports:
+    - name: http
+      port: 8004
+      targetPort: 8004

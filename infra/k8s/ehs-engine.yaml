@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ehs-engine
+  namespace: smartcity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ehs-engine
+  template:
+    metadata:
+      labels:
+        app: ehs-engine
+    spec:
+      containers:
+        - name: ehs-engine
+          image: smartcity/ehs-engine:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8002
+          env:
+            - name: EHS_RABBITMQ_HOST
+              value: rabbitmq
+            - name: EHS_RABBITMQ_PORT
+              value: "5672"
+            - name: EHS_RABBITMQ_USERNAME
+              value: guest
+            - name: EHS_RABBITMQ_PASSWORD
+              value: guest
+            - name: EHS_RABBITMQ_EXCHANGE
+              value: smartcity_exchange
+            - name: EHS_RABBITMQ_SUBSCRIBE_BINDING_KEY
+              value: telemetry.ehs.#
+            - name: EHS_MQTT_BROKER_HOST
+              value: ingestion-engine
+            - name: EHS_MQTT_BROKER_PORT
+              value: "1883"
+            - name: EHS_MQTT_TOPIC
+              value: smartcity/telemetry/ehs
+            - name: EHS_INFLUXDB_URL
+              value: http://influxdb:8086
+            - name: EHS_INFLUXDB_TOKEN
+              value: dev-token-replace-in-production
+            - name: EHS_INFLUXDB_ORG
+              value: smartcity
+            - name: EHS_INFLUXDB_BUCKET
+              value: ehs_telemetry
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 12
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ehs-engine
+  namespace: smartcity
+spec:
+  selector:
+    app: ehs-engine
+  ports:
+    - name: http
+      port: 8002
+      targetPort: 8002

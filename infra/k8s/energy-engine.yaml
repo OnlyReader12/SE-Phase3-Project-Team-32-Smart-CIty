@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: energy-engine
+  namespace: smartcity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: energy-engine
+  template:
+    metadata:
+      labels:
+        app: energy-engine
+    spec:
+      containers:
+        - name: energy-engine
+          image: smartcity/energy-engine:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8003
+          env:
+            - name: ENERGY_RABBITMQ_HOST
+              value: rabbitmq
+            - name: ENERGY_RABBITMQ_PORT
+              value: "5672"
+            - name: ENERGY_RABBITMQ_USERNAME
+              value: guest
+            - name: ENERGY_RABBITMQ_PASSWORD
+              value: guest
+            - name: ENERGY_RABBITMQ_EXCHANGE
+              value: smartcity_exchange
+            - name: ENERGY_RABBITMQ_SUBSCRIBE_BINDING_KEY
+              value: telemetry.energy.#
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 8
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: energy-engine
+  namespace: smartcity
+spec:
+  selector:
+    app: energy-engine
+  ports:
+    - name: http
+      port: 8003
+      targetPort: 8003

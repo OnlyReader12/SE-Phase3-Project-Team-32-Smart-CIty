@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: persistent-middleware
+  namespace: smartcity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: persistent-middleware
+  template:
+    metadata:
+      labels:
+        app: persistent-middleware
+    spec:
+      containers:
+        - name: persistent-middleware
+          image: smartcity/persistent-middleware:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+          env:
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USERNAME
+              value: guest
+            - name: RABBITMQ_PASSWORD
+              value: guest
+            - name: RABBITMQ_EXCHANGE
+              value: smartcity_exchange
+            - name: SQLALCHEMY_DATABASE_URL
+              value: sqlite:////data/edge_persistence.db
+          volumeMounts:
+            - name: middleware-data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /view
+              port: 8001
+            initialDelaySeconds: 8
+            periodSeconds: 10
+      volumes:
+        - name: middleware-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: persistent-middleware
+  namespace: smartcity
+spec:
+  selector:
+    app: persistent-middleware
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 8001

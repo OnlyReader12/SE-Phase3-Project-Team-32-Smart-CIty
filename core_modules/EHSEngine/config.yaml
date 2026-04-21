@@ -37,6 +37,16 @@ ehs_engine:
     subscribe_binding_key: "telemetry.enviro.#"
     publish_topic: "alerts.critical"
 
+  # --- MQTT (Mosquitto) Configuration ---
+  # Direct IoT sensor protocol — matches IOTDataGenerator/iot_generator.py
+  mqtt:
+    broker_host: "localhost"
+    broker_port: 1883
+    # IoT Generator publishes to: smartcity/telemetry/{domain}
+    # EHS nodes publish to: smartcity/telemetry/ehs
+    topic: "smartcity/telemetry/ehs"
+    client_id: "ehs_engine_subscriber"
+
   # --- InfluxDB Configuration ---
   influxdb:
     url: "http://localhost:8086"
