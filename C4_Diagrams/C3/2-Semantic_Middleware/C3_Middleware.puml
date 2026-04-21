@@ -1,0 +1,24 @@
+@startuml C3_Middleware
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.5.0/C4_Component.puml
+
+title "Component diagram for the Semantic Middleware"
+
+Container(gateway, "Ingestion Gateway", "Adapter", "Raw data buffer")
+ContainerDb(rabbit, "Central Message Broker", "RabbitMQ", "Microkernel bus")
+
+Container_Boundary(semantic, "Semantic Middleware (OneM2M Core)") {
+    Component(ingestor, "Payload Ingestor", "Eclipse OM2M", "Receives unstructured sensor outputs.")
+    ComponentDb(dict, "Knowledge Graph", "Local File", "Maps Hardware MACs to logical Smart City concepts.")
+    Component(translator, "Ontology Translator", "Eclipse OM2M", "Standardizes structure to OneM2M format.")
+    Component(amqpPub, "AMQP Publisher", "Pika Client", "Drops clean objects into the routing bus.")
+}
+
+Rel(gateway, ingestor, "Passes unstructured packets", "TCP/HTTP")
+Rel(ingestor, translator, "Passes payload")
+
+Rel(translator, dict, "Looks up hardware context", "Reads")
+Rel(translator, amqpPub, "Hands off standard JSON")
+
+Rel(amqpPub, rabbit, "Publishes to relevant exchange", "AMQP Pub")
+
+@enduml

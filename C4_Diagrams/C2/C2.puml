@@ -1,0 +1,38 @@
+@startuml C2_Container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.5.0/C4_Container.puml
+
+title "Container diagram for Smart City Living Lab"
+
+System_Ext(iot, "IoT Nodes", "Hardware")
+
+Container(ui, "Unified Dashboard App", "Flutter", "Provides UI functionality via Mobile and Web.")
+Container(api, "API Gateway", "FastAPI", "Handles UI requests and routes them securely.")
+Container(middleware, "OneM2M Semantic Middleware", "Eclipse OM2M", "Standardizes all incoming raw IoT payloads.")
+
+ContainerDb(rabbit, "Central Message Broker", "RabbitMQ", "Microkernel asynchronous routing bus.")
+
+Container(camEngine, "CAM Engine", "FastAPI", "Crowd & Access <1s logic.")
+Container(ehsEngine, "EHS Engine", "FastAPI", "Environmental ML models.")
+Container(energyEngine, "Energy Engine", "FastAPI", "Automated smart-control logic.")
+Container(alertEngine, "Alerting Engine", "FastAPI", "Triggers Twilio/SendGrid.")
+Container(scrubber, "Privacy Scrubbing API", "FastAPI + Pandas", "Strips PII for researchers.")
+
+ContainerDb(influx, "Telemetry Store", "InfluxDB", "30-day time-series window.")
+ContainerDb(postgres, "Config & RBAC Store", "PostgreSQL", "Users and Roles tables.")
+
+Rel(iot, middleware, "Ingests raw protocols", "MQTT/HTTP")
+Rel(middleware, rabbit, "Publishes standardized objects", "AMQP")
+
+Rel(ui, api, "Makes API calls to", "HTTPS")
+Rel(api, postgres, "Reads RBAC & Configs", "psycopg2")
+
+Rel(rabbit, camEngine, "Consumes Access topics", "AMQP Sub")
+Rel(rabbit, ehsEngine, "Consumes Enviro topics", "AMQP Sub")
+Rel(rabbit, energyEngine, "Consumes Energy topics", "AMQP Sub")
+
+Rel(ehsEngine, alertEngine, "Publishes emergency state", "AMQP Pub")
+Rel(ehsEngine, influx, "Writes telemetry", "TCP")
+Rel(energyEngine, influx, "Writes telemetry", "TCP")
+
+Rel(scrubber, influx, "Reads telemetry for 3rd parties", "TCP")
+@enduml

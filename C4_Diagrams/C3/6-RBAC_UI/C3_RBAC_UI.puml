@@ -1,0 +1,33 @@
+@startuml C3_RBAC_UI
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.5.0/C4_Component.puml
+
+title "Component diagram for RBAC & UI Subsystem"
+
+Person(users, "Residents & Managers", "UI Consumers")
+ContainerDb(postgres, "Config & RBAC Store", "PostgreSQL")
+ContainerDb(influx, "Telemetry Data", "InfluxDB")
+
+Container_Boundary(frontend, "Unified App (Flutter)") {
+    Component(views, "Rendered Views", "Dart/Flutter", "Web, iOS, Android visual widgets.")
+}
+
+Container_Boundary(backend, "API Gateway (FastAPI)") {
+    Component(gateway, "Auth Gateway Controller", "FastAPI Route", "Intercepts inbound UI requests.")
+    Component(jwt, "JWT Token Validator", "Python-Jose", "Unpacks stateless session tokens.")
+    Component(rbac, "Postgres RBAC Verifier", "SQLAlchemy", "Checks user privileges against role tables.")
+    Component(aggregator, "Dashboard Aggregator", "Python", "Collects authorized data for rendering.")
+}
+
+Rel(users, views, "Interacts with")
+Rel(views, gateway, "Requests dashboard state", "HTTPS")
+
+Rel(gateway, jwt, "passes token")
+Rel(jwt, rbac, "passes Decoded User ID")
+
+Rel(rbac, postgres, "Verifies Role permissions", "psycopg2")
+
+Rel(rbac, aggregator, "triggers fetch (if Authorized)")
+Rel(aggregator, influx, "collects required telemetry", "TCP")
+Rel(aggregator, gateway, "returns UI Payload")
+
+@enduml

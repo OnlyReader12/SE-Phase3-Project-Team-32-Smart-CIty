@@ -1,0 +1,25 @@
+@startuml C3_Ingestion
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.5.0/C4_Component.puml
+
+title "Component diagram for the Data Ingestion Gateway"
+
+System_Ext(iot, "300 IoT Nodes", "Diverse physical sensors")
+Container(middleware, "Semantic Middleware", "OneM2M", "Standardizes payloads")
+
+Container_Boundary(gateway, "Data Ingestion Gateway (Adapter)") {
+    Component(mqttEndpoint, "MQTT Broker Endpoint", "Python/Mosquitto", "Listens for lightweight pub/sub telemetry.")
+    Component(httpEndpoint, "HTTP REST Endpoint", "Python/FastAPI", "Receives standard JSON POST requests.")
+    Component(validator, "Connection Validator", "Python", "Authenticates hardware MAC / API Keys.")
+    Component(dispatcher, "Raw Protocol Dispatcher", "Python", "Buffers and forwards raw streams to Middleware.")
+}
+
+Rel(iot, mqttEndpoint, "Publishes Telemetry", "MQTT")
+Rel(iot, httpEndpoint, "Posts Telemetry", "HTTPS")
+
+Rel(mqttEndpoint, validator, "Passes payload")
+Rel(httpEndpoint, validator, "Passes payload")
+
+Rel(validator, dispatcher, "Forwards validated payload")
+Rel(dispatcher, middleware, "Pushes raw data for standardization", "TCP/HTTP")
+
+@enduml

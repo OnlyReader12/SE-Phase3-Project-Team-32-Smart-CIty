@@ -1,0 +1,25 @@
+@startuml C3_Privacy
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.5.0/C4_Component.puml
+
+title "Component diagram for Data Privacy & Researcher Gateway"
+
+Person_Ext(researchers, "External Researchers", "Queries historical data")
+ContainerDb(influx, "Telemetry Store", "InfluxDB")
+
+Container_Boundary(privacy, "Privacy & Researcher Gateway (FastAPI)") {
+    Component(apiCtrl, "Researcher API Controller", "FastAPI Endpoints", "Exposes REST routes for batch data.")
+    Component(validator, "Time-Bound Validator", "Python", "Ensures queries stay within the 30-day mandate.")
+    Component(tsdbReader, "InfluxDB Reader DAO", "InfluxDB-Client", "Executes safe read operations.")
+    Component(scrubber, "Pandas Scrubbing Engine", "Python/Pandas", "Deletes PII columns from DataFrames in-memory.")
+}
+
+Rel(researchers, apiCtrl, "Requests datasets", "HTTPS GET")
+Rel(apiCtrl, validator, "passes request parameters")
+
+Rel(validator, tsdbReader, "triggers query (if valid)")
+Rel(tsdbReader, influx, "Reads historical data", "TCP")
+
+Rel(tsdbReader, scrubber, "returns raw payload with possible PII")
+Rel(scrubber, apiCtrl, "returns clean, anonymized JSON")
+
+@enduml

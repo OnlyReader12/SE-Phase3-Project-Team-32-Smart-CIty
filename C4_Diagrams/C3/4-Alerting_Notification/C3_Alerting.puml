@@ -1,0 +1,26 @@
+@startuml C3_Alerting
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.5.0/C4_Component.puml
+
+title "Component diagram for Alerting & Notification"
+
+ContainerDb(rabbit, "RabbitMQ", "Microkernel bus")
+System_Ext(twilio, "Twilio SMS", "External Gateway")
+System_Ext(sendgrid, "SendGrid Email", "External Gateway")
+
+Container_Boundary(alerting, "Alerting Subsystem (FastAPI)") {
+    Component(sub, "Emergency Topic Subscriber", "Pika Client", "Listens for 'Alerts.*' topics across the city.")
+    Component(formatter, "Message Formatter", "Python", "Transforms JSON state into human-readable warnings.")
+    Component(twilioClient, "Twilio REST Client", "Python requests", "Handles SMS payload assembly.")
+    Component(emailClient, "SendGrid REST Client", "SendGrid-Python", "Handles Email payload assembly.")
+}
+
+Rel(rabbit, sub, "pushes critical triggers to", "AMQP Sub")
+Rel(sub, formatter, "passes alert payload")
+
+Rel(formatter, twilioClient, "formats short-text")
+Rel(formatter, emailClient, "formats long-text")
+
+Rel(twilioClient, twilio, "POSTs SMS request", "HTTPS")
+Rel(emailClient, sendgrid, "POSTs Email request", "HTTPS")
+
+@enduml

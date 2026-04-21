@@ -1,0 +1,29 @@
+@startuml C3_Domain
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.5.0/C4_Component.puml
+
+title "Component diagram for standard Domain Processing Engines"
+
+ContainerDb(rabbit, "Central Message Broker", "RabbitMQ", "Microkernel bus")
+ContainerDb(influx, "Telemetry Store", "InfluxDB", "TSDB")
+
+Container_Boundary(domain, "Domain Engine Container (FastAPI)") {
+    Component(consumer, "AMQP Routing Consumer", "Pika Client", "Binds to specific Exchange Topics.")
+    Component(evaluator, "Engine Evaluator", "Python", "Base business logic & threshold checking.")
+    Component(ml, "ML Integration Module", "Scikit/TensorFlow", "Executes ready-made forecasting models.")
+    Component(tsdbWriter, "TSDB Synchronizer", "InfluxDB-Client", "Batches telemetry & predictions.")
+    Component(actionPub, "Action Publisher", "Pika Client", "Fires automation triggers or Alerts.")
+}
+
+Rel(rabbit, consumer, "pushes relevant topic events", "AMQP Sub")
+Rel(consumer, evaluator, "forwards normalized event")
+
+Rel(evaluator, ml, "requests forecast on payload")
+Rel(ml, tsdbWriter, "passes forecast result")
+Rel(evaluator, tsdbWriter, "passes evaluated state")
+
+Rel(tsdbWriter, influx, "inserts data", "TCP")
+
+Rel(evaluator, actionPub, "generates action command if needed")
+Rel(actionPub, rabbit, "publishes back to bus", "AMQP Pub")
+
+@enduml

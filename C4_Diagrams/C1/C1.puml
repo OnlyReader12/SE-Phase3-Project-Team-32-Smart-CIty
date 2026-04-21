@@ -1,0 +1,24 @@
+@startuml C1_Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.5.0/C4_Context.puml
+
+title "System Context diagram for Smart City Living Lab"
+
+Person(managers, "Campus Managers", "EHS, Energy, and CAM administrators monitoring the city.")
+Person(residents, "Residents", "Campus students and staff receiving alerts.")
+Person_Ext(researchers, "Researchers", "Third-party scientists querying datasets.")
+
+System(smartCity, "Smart City Living Lab", "Ingests 300 IoT node telemetry, processes ML engines, and serves RBAC dashboards.")
+
+System_Ext(iotNodes, "300 IoT Nodes", "Heterogeneous physical sensors capturing city vitals.")
+System_Ext(twilio, "Twilio SMS API", "External gateway for SMS text delivery.")
+System_Ext(sendgrid, "SendGrid Email API", "External gateway for Email delivery.")
+
+Rel(managers, smartCity, "Views dashboards & configures rules via", "HTTPS")
+Rel(residents, smartCity, "Views app vitals via", "HTTPS")
+Rel(researchers, smartCity, "Extracts historical data via", "REST API")
+
+Rel(iotNodes, smartCity, "Streams telemetry via", "MQTT/CoAP/HTTP")
+Rel(smartCity, twilio, "Dispatches offline SMS alerts using", "HTTPS")
+Rel(smartCity, sendgrid, "Dispatches offline Email alerts using", "HTTPS")
+
+@enduml
