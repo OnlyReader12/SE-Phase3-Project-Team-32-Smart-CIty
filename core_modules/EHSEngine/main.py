@@ -35,6 +35,8 @@ import sys
 import yaml
 import uvicorn
 import traceback
+import copy
+import random
 import requests
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.concurrency import run_in_threadpool
@@ -434,6 +436,34 @@ async def get_presentation_data():
 
     prediction = _evaluator.get_prediction(primary_node) if primary_node else None
 
+    presentation_dashboard = copy.deepcopy(dashboard)
+    snapshot_label = random.choice(["Live snapshot", "Presentation snapshot", "Refresh snapshot"])
+    refresh_tick = random.randint(1000, 9999)
+
+    if presentation_dashboard.get("node_statuses"):
+        spotlight = random.choice(presentation_dashboard["node_statuses"])
+    else:
+        spotlight = {"node_id": "N/A", "node_type": "unknown", "status": "SAFE"}
+
+    base_score = presentation_dashboard.get("campus_health_score", 0)
+    presentation_dashboard["campus_health_score"] = max(0, min(100, round(base_score + random.uniform(-2.0, 2.0), 1)))
+    presentation_dashboard["presentation_snapshot"] = {
+        "label": snapshot_label,
+        "refresh_tick": refresh_tick,
+        "spotlight_node": spotlight,
+    }
+
+    if presentation_dashboard.get("suggestions"):
+        random.shuffle(presentation_dashboard["suggestions"])
+
+    metric_cards = presentation_dashboard.get("metric_cards", {})
+    for card in metric_cards.values():
+        if isinstance(card, dict) and "avg" in card:
+            try:
+                card["avg"] = round(float(card["avg"]) + random.uniform(-0.5, 0.5), 1)
+            except Exception:
+                pass
+
     return {
         "flow": [
             {
@@ -467,7 +497,7 @@ async def get_presentation_data():
                 "detail": f"{len(dashboard.get('suggestions', []))} actionable suggestions ready",
             },
         ],
-        "engine": dashboard,
+        "engine": presentation_dashboard,
         "prediction": prediction,
         "middleware": {
             "base_url": middleware_base,

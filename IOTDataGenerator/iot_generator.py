@@ -27,6 +27,7 @@ import random
 import math
 import threading
 import datetime
+import os
 import requests
 import paho.mqtt.client as mqtt
 
@@ -120,6 +121,8 @@ class SimulatedNode:
         self.protocol = protocol_adapter
         self.domain = "unknown"
         self.node_type = "unknown"
+        seed = int.from_bytes(os.urandom(16), "big") ^ time.time_ns() ^ hash(node_id)
+        self.rng = random.Random(seed)
 
     def generate_payload(self):
         raise NotImplementedError
@@ -130,7 +133,7 @@ class SimulatedNode:
             payload = self.generate_payload()
             self.protocol.send(payload)
             # Add some jitter so 300 nodes don't fire at the exact same millisecond
-            time.sleep(interval + random.uniform(-1, 1))
+            time.sleep(interval + self.rng.uniform(-1.2, 1.2))
 
 
 # ──────────────────────────────────────────
@@ -151,17 +154,17 @@ class AirQualityNode(SimulatedNode):
         self.node_type = "air_quality"
 
     def generate_payload(self):
-        is_spike = random.random() < 0.05
-        aqi = random.randint(150, 400) if is_spike else random.randint(20, 50)
+        is_spike = self.rng.random() < 0.05
+        aqi = self.rng.randint(150, 400) if is_spike else self.rng.randint(18, 65)
         # PM2.5 and PM10 correlate with AQI
-        pm25 = round(aqi * 0.35 + random.uniform(-5, 5), 1)
-        pm10 = round(aqi * 0.55 + random.uniform(-8, 8), 1)
+        pm25 = round(aqi * 0.35 + self.rng.uniform(-7, 7), 1)
+        pm10 = round(aqi * 0.55 + self.rng.uniform(-10, 10), 1)
         # CO2 follows traffic patterns (higher during business hours)
         hour = datetime.datetime.now().hour
         base_co2 = 400 + (150 if 8 <= hour <= 18 else 0)
-        co2_ppm = round(base_co2 + random.uniform(-30, 30))
-        temperature_c = round(random.uniform(18, 38), 1)
-        humidity_pct = round(random.uniform(30, 85), 1)
+        co2_ppm = round(base_co2 + self.rng.uniform(-45, 45))
+        temperature_c = round(self.rng.uniform(17, 39), 1)
+        humidity_pct = round(self.rng.uniform(28, 88), 1)
 
         return {
             "node_id": self.node_id,
@@ -175,7 +178,7 @@ class AirQualityNode(SimulatedNode):
                 "co2_ppm": max(350, co2_ppm),
                 "temperature_c": temperature_c,
                 "humidity_pct": humidity_pct,
-                "water_ph": round(random.uniform(6.5, 8.5), 2),
+                "water_ph": round(self.rng.uniform(6.3, 8.7), 2),
                 "is_critical": is_spike
             }
         }
@@ -199,15 +202,15 @@ class WaterQualityNode(SimulatedNode):
         self.node_type = "water_quality"
 
     def generate_payload(self):
-        is_contaminated = random.random() < 0.03
-        water_ph = round(random.uniform(3.5, 5.0) if is_contaminated
-                         else random.uniform(6.5, 8.5), 2)
+        is_contaminated = self.rng.random() < 0.03
+        water_ph = round(self.rng.uniform(3.5, 5.0) if is_contaminated
+                         else self.rng.uniform(6.4, 8.6), 2)
         # Turbidity spikes during contamination
-        turbidity_ntu = round(random.uniform(50, 200) if is_contaminated
-                              else random.uniform(0.5, 4.5), 2)
-        dissolved_oxygen = round(random.uniform(2.0, 5.0) if is_contaminated
-                                 else random.uniform(6.0, 12.0), 2)
-        water_temp_c = round(random.uniform(15, 30), 1)
+        turbidity_ntu = round(self.rng.uniform(50, 200) if is_contaminated
+                              else self.rng.uniform(0.3, 6.0), 2)
+        dissolved_oxygen = round(self.rng.uniform(2.0, 5.0) if is_contaminated
+                                 else self.rng.uniform(5.5, 12.5), 2)
+        water_temp_c = round(self.rng.uniform(14, 31), 1)
 
         return {
             "node_id": self.node_id,
@@ -215,7 +218,7 @@ class WaterQualityNode(SimulatedNode):
             "node_type": self.node_type,
             "timestamp": datetime.datetime.now().isoformat(),
             "data": {
-                "aqi": random.randint(20, 50),
+                "aqi": self.rng.randint(18, 65),
                 "water_ph": water_ph,
                 "turbidity_ntu": turbidity_ntu,
                 "dissolved_oxygen_mgl": dissolved_oxygen,
@@ -243,12 +246,12 @@ class NoiseMonitorNode(SimulatedNode):
         self.node_type = "noise_monitor"
 
     def generate_payload(self):
-        is_loud = random.random() < 0.10
-        noise_db = round(random.uniform(70, 100) if is_loud
-                         else random.uniform(35, 60), 1)
-        peak_db = round(noise_db + random.uniform(3, 15), 1)
+        is_loud = self.rng.random() < 0.10
+        noise_db = round(self.rng.uniform(70, 100) if is_loud
+                         else self.rng.uniform(32, 65), 1)
+        peak_db = round(noise_db + self.rng.uniform(3, 15), 1)
         # Dominant frequency: low rumble (construction) vs speech range
-        frequency_hz = random.choice([125, 250, 500, 1000, 2000, 4000])
+        frequency_hz = self.rng.choice([125, 250, 500, 1000, 2000, 4000])
 
         return {
             "node_id": self.node_id,
@@ -285,15 +288,15 @@ class WeatherStationNode(SimulatedNode):
         hour = datetime.datetime.now().hour
         # Diurnal temperature curve: min ~5AM, max ~2PM
         base_temp = 25 + 8 * math.sin((hour - 5) * math.pi / 12)
-        temperature_c = round(base_temp + random.uniform(-2, 2), 1)
-        humidity_pct = round(max(20, min(95, 70 - temperature_c * 0.8 + random.uniform(-10, 10))), 1)
-        wind_speed_ms = round(random.uniform(0, 15), 1)
-        wind_direction_deg = random.randint(0, 359)
-        pressure_hpa = round(random.uniform(1008, 1025), 1)
+        temperature_c = round(base_temp + self.rng.uniform(-2.4, 2.4), 1)
+        humidity_pct = round(max(20, min(95, 70 - temperature_c * 0.8 + self.rng.uniform(-12, 12))), 1)
+        wind_speed_ms = round(self.rng.uniform(0, 15), 1)
+        wind_direction_deg = self.rng.randint(0, 359)
+        pressure_hpa = round(self.rng.uniform(1008, 1025), 1)
         # UV index follows sunlight curve
         uv_index = round(max(0, 8 * math.sin((hour - 6) * math.pi / 12)
-                              + random.uniform(-1, 1)), 1) if 6 <= hour <= 18 else 0
-        rainfall_mm = round(random.uniform(0, 5), 1) if random.random() < 0.15 else 0
+                              + self.rng.uniform(-1, 1)), 1) if 6 <= hour <= 18 else 0
+        rainfall_mm = round(self.rng.uniform(0, 5), 1) if self.rng.random() < 0.15 else 0
 
         return {
             "node_id": self.node_id,
@@ -334,10 +337,10 @@ class SoilSensorNode(SimulatedNode):
         hour = datetime.datetime.now().hour
         # Irrigation typically at 6AM and 6PM → moisture spikes
         is_irrigated = hour in (6, 7, 18, 19)
-        soil_moisture_pct = round(random.uniform(60, 85) if is_irrigated
-                                  else random.uniform(20, 50), 1)
-        soil_ph = round(random.uniform(5.5, 7.5), 2)
-        soil_temp_c = round(random.uniform(15, 35), 1)
+        soil_moisture_pct = round(self.rng.uniform(60, 85) if is_irrigated
+                                  else self.rng.uniform(20, 50), 1)
+        soil_ph = round(self.rng.uniform(5.4, 7.6), 2)
+        soil_temp_c = round(self.rng.uniform(14, 36), 1)
 
         return {
             "node_id": self.node_id,
@@ -371,15 +374,15 @@ class RadiationGasNode(SimulatedNode):
         self.node_type = "radiation_gas"
 
     def generate_payload(self):
-        is_leak = random.random() < 0.02
-        radiation_usv = round(random.uniform(0.5, 2.5) if is_leak
-                              else random.uniform(0.05, 0.25), 3)
-        voc_ppb = round(random.uniform(1500, 5000) if is_leak
-                        else random.uniform(50, 400))
-        co_ppm = round(random.uniform(20, 80) if is_leak
-                       else random.uniform(0, 5), 1)
-        methane_ppm = round(random.uniform(500, 2000) if is_leak
-                           else random.uniform(1, 50), 1)
+        is_leak = self.rng.random() < 0.02
+        radiation_usv = round(self.rng.uniform(0.5, 2.5) if is_leak
+                              else self.rng.uniform(0.05, 0.25), 3)
+        voc_ppb = round(self.rng.uniform(1500, 5000) if is_leak
+                        else self.rng.uniform(50, 400))
+        co_ppm = round(self.rng.uniform(20, 80) if is_leak
+                       else self.rng.uniform(0, 5), 1)
+        methane_ppm = round(self.rng.uniform(500, 2000) if is_leak
+                           else self.rng.uniform(1, 50), 1)
 
         return {
             "node_id": self.node_id,
@@ -412,9 +415,9 @@ class EnergyNode(SimulatedNode):
         solar_output = 0
         if 7 <= hour <= 18:
             # Curve peaks around noon (hour 12)
-            solar_output = max(0, 1000 - (abs(12 - hour) * 150)) + random.randint(-50, 50)
+            solar_output = max(0, 1000 - (abs(12 - hour) * 150)) + self.rng.randint(-50, 50)
 
-        ac_load = random.randint(300, 1200)
+        ac_load = self.rng.randint(300, 1200)
 
         return {
             "node_id": self.node_id,

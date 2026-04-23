@@ -36,6 +36,7 @@ import traceback
 import argparse
 import socket
 import threading
+import random
 from collections import deque
 from typing import List, Dict, Any, Tuple
 
@@ -151,119 +152,175 @@ ALL_RESULTS: List[TestResult] = []
 # TEST PAYLOAD DEFINITIONS
 # ═══════════════════════════════════════
 
-TEST_PAYLOADS = [
-    # ── Air Quality Stations (3 nodes: CRITICAL, SAFE, WARNING) ──
-    {
-        "node_id": "EHS-AQI-001", "domain": "ehs", "node_type": "air_quality",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 380, "water_ph": 7.2, "pm25": 200, "pm10": 280,
-            "co2_ppm": 650, "temperature_c": 34, "humidity_pct": 72,
-            "is_critical": True
-        }
-    },
-    {
-        "node_id": "EHS-AQI-002", "domain": "ehs", "node_type": "air_quality",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 42, "water_ph": 7.1, "pm25": 10, "pm10": 18,
-            "co2_ppm": 415, "temperature_c": 26, "humidity_pct": 55,
-            "is_critical": False
-        }
-    },
-    {
-        "node_id": "EHS-AQI-003", "domain": "ehs", "node_type": "air_quality",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 175, "water_ph": 7.4, "pm25": 62, "pm10": 95,
-            "co2_ppm": 510, "temperature_c": 30, "humidity_pct": 60,
-            "is_critical": False
-        }
-    },
+def build_test_payloads() -> List[Dict[str, Any]]:
+    """Build varied demo payloads for each run while preserving coverage scenarios."""
+    ts = datetime.datetime.now().isoformat
 
-    # ── Water Quality Probes (2 nodes: CRITICAL contamination, SAFE) ──
-    {
-        "node_id": "EHS-WTR-001", "domain": "ehs", "node_type": "water_quality",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 30, "water_ph": 4.0, "turbidity_ntu": 78,
-            "dissolved_oxygen_mgl": 2.8, "water_temp_c": 24,
-            "is_critical": True
-        }
-    },
-    {
-        "node_id": "EHS-WTR-002", "domain": "ehs", "node_type": "water_quality",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 28, "water_ph": 7.3, "turbidity_ntu": 2.1,
-            "dissolved_oxygen_mgl": 8.5, "water_temp_c": 21,
-            "is_critical": False
-        }
-    },
+    aqi_critical = random.randint(330, 420)
+    aqi_safe = random.randint(20, 70)
+    aqi_warning = random.randint(155, 240)
 
-    # ── Noise Monitors (2 nodes: CRITICAL construction, SAFE) ──
-    {
-        "node_id": "EHS-NOS-001", "domain": "ehs", "node_type": "noise_monitor",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 35, "water_ph": 7.0, "noise_db": 94,
-            "peak_db": 108, "frequency_hz": 250,
-            "is_critical": True
-        }
-    },
-    {
-        "node_id": "EHS-NOS-002", "domain": "ehs", "node_type": "noise_monitor",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 35, "water_ph": 7.0, "noise_db": 48,
-            "peak_db": 55, "frequency_hz": 1000,
-            "is_critical": False
-        }
-    },
+    wtr_critical_ph = round(random.uniform(3.6, 4.9), 2)
+    wtr_safe_ph = round(random.uniform(6.7, 8.2), 2)
 
-    # ── Weather Station (1 node: extreme UV) ──
-    {
-        "node_id": "EHS-WEA-001", "domain": "ehs", "node_type": "weather_station",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 38, "water_ph": 7.0, "temperature_c": 39,
-            "humidity_pct": 28, "wind_speed_ms": 6.5,
-            "wind_direction_deg": 180, "pressure_hpa": 1012,
-            "uv_index": 10.5, "rainfall_mm": 0,
-            "is_critical": False
-        }
-    },
+    noise_critical = round(random.uniform(88, 102), 1)
+    noise_safe = round(random.uniform(38, 60), 1)
 
-    # ── Soil Sensors (1 node: normal) ──
-    {
-        "node_id": "EHS-SOL-001", "domain": "ehs", "node_type": "soil_sensor",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 30, "water_ph": 7.0, "soil_moisture_pct": 42,
-            "soil_ph": 6.2, "soil_temp_c": 28,
-            "is_critical": False
-        }
-    },
+    uv_critical = round(random.uniform(8.8, 11.5), 1)
 
-    # ── Radiation/Gas Detectors (1 node: CRITICAL lab leak) ──
-    {
-        "node_id": "EHS-RAD-001", "domain": "ehs", "node_type": "radiation_gas",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "data": {
-            "aqi": 32, "water_ph": 7.0, "voc_ppb": 3800,
-            "co_ppm": 52, "radiation_usv": 1.5, "methane_ppm": 950,
-            "is_critical": True
-        }
-    },
-]
+    return [
+        {
+            "node_id": "EHS-AQI-001", "domain": "ehs", "node_type": "air_quality",
+            "timestamp": ts(),
+            "data": {
+                "aqi": aqi_critical,
+                "water_ph": round(random.uniform(6.8, 7.6), 2),
+                "pm25": round(aqi_critical * random.uniform(0.42, 0.56), 1),
+                "pm10": round(aqi_critical * random.uniform(0.65, 0.85), 1),
+                "co2_ppm": round(random.uniform(560, 820)),
+                "temperature_c": round(random.uniform(31, 39), 1),
+                "humidity_pct": round(random.uniform(58, 84), 1),
+                "is_critical": True,
+            },
+        },
+        {
+            "node_id": "EHS-AQI-002", "domain": "ehs", "node_type": "air_quality",
+            "timestamp": ts(),
+            "data": {
+                "aqi": aqi_safe,
+                "water_ph": round(random.uniform(6.9, 7.5), 2),
+                "pm25": round(aqi_safe * random.uniform(0.22, 0.35), 1),
+                "pm10": round(aqi_safe * random.uniform(0.35, 0.48), 1),
+                "co2_ppm": round(random.uniform(390, 500)),
+                "temperature_c": round(random.uniform(22, 29), 1),
+                "humidity_pct": round(random.uniform(45, 66), 1),
+                "is_critical": False,
+            },
+        },
+        {
+            "node_id": "EHS-AQI-003", "domain": "ehs", "node_type": "air_quality",
+            "timestamp": ts(),
+            "data": {
+                "aqi": aqi_warning,
+                "water_ph": round(random.uniform(6.9, 7.8), 2),
+                "pm25": round(aqi_warning * random.uniform(0.28, 0.45), 1),
+                "pm10": round(aqi_warning * random.uniform(0.45, 0.62), 1),
+                "co2_ppm": round(random.uniform(470, 640)),
+                "temperature_c": round(random.uniform(27, 34), 1),
+                "humidity_pct": round(random.uniform(52, 72), 1),
+                "is_critical": False,
+            },
+        },
+        {
+            "node_id": "EHS-WTR-001", "domain": "ehs", "node_type": "water_quality",
+            "timestamp": ts(),
+            "data": {
+                "aqi": random.randint(24, 48),
+                "water_ph": wtr_critical_ph,
+                "turbidity_ntu": round(random.uniform(58, 110), 1),
+                "dissolved_oxygen_mgl": round(random.uniform(2.0, 4.0), 2),
+                "water_temp_c": round(random.uniform(22, 29), 1),
+                "is_critical": True,
+            },
+        },
+        {
+            "node_id": "EHS-WTR-002", "domain": "ehs", "node_type": "water_quality",
+            "timestamp": ts(),
+            "data": {
+                "aqi": random.randint(20, 44),
+                "water_ph": wtr_safe_ph,
+                "turbidity_ntu": round(random.uniform(0.8, 4.2), 2),
+                "dissolved_oxygen_mgl": round(random.uniform(7.2, 10.4), 2),
+                "water_temp_c": round(random.uniform(19, 25), 1),
+                "is_critical": False,
+            },
+        },
+        {
+            "node_id": "EHS-NOS-001", "domain": "ehs", "node_type": "noise_monitor",
+            "timestamp": ts(),
+            "data": {
+                "aqi": random.randint(25, 45),
+                "water_ph": round(random.uniform(6.8, 7.4), 2),
+                "noise_db": noise_critical,
+                "peak_db": round(noise_critical + random.uniform(8, 15), 1),
+                "frequency_hz": random.choice([125, 250, 500]),
+                "is_critical": True,
+            },
+        },
+        {
+            "node_id": "EHS-NOS-002", "domain": "ehs", "node_type": "noise_monitor",
+            "timestamp": ts(),
+            "data": {
+                "aqi": random.randint(25, 45),
+                "water_ph": round(random.uniform(6.8, 7.4), 2),
+                "noise_db": noise_safe,
+                "peak_db": round(noise_safe + random.uniform(4, 10), 1),
+                "frequency_hz": random.choice([1000, 2000, 4000]),
+                "is_critical": False,
+            },
+        },
+        {
+            "node_id": "EHS-WEA-001", "domain": "ehs", "node_type": "weather_station",
+            "timestamp": ts(),
+            "data": {
+                "aqi": random.randint(26, 50),
+                "water_ph": round(random.uniform(6.8, 7.4), 2),
+                "temperature_c": round(random.uniform(34, 41), 1),
+                "humidity_pct": round(random.uniform(25, 42), 1),
+                "wind_speed_ms": round(random.uniform(3.8, 8.2), 1),
+                "wind_direction_deg": random.randint(0, 359),
+                "pressure_hpa": round(random.uniform(1008, 1018), 1),
+                "uv_index": uv_critical,
+                "rainfall_mm": round(random.uniform(0, 1.2), 1),
+                "is_critical": False,
+            },
+        },
+        {
+            "node_id": "EHS-SOL-001", "domain": "ehs", "node_type": "soil_sensor",
+            "timestamp": ts(),
+            "data": {
+                "aqi": random.randint(24, 45),
+                "water_ph": round(random.uniform(6.8, 7.3), 2),
+                "soil_moisture_pct": round(random.uniform(34, 56), 1),
+                "soil_ph": round(random.uniform(5.8, 6.8), 2),
+                "soil_temp_c": round(random.uniform(23, 32), 1),
+                "is_critical": False,
+            },
+        },
+        {
+            "node_id": "EHS-RAD-001", "domain": "ehs", "node_type": "radiation_gas",
+            "timestamp": ts(),
+            "data": {
+                "aqi": random.randint(24, 45),
+                "water_ph": round(random.uniform(6.8, 7.3), 2),
+                "voc_ppb": round(random.uniform(2600, 4600)),
+                "co_ppm": round(random.uniform(34, 62), 1),
+                "radiation_usv": round(random.uniform(0.9, 2.1), 3),
+                "methane_ppm": round(random.uniform(700, 1400), 1),
+                "is_critical": True,
+            },
+        },
+    ]
 
-# Send a few extra rounds to build ML history
-EXTRA_HISTORY_PAYLOADS = [
-    {"node_id": "EHS-AQI-001", "domain": "ehs", "node_type": "air_quality",
-     "timestamp": datetime.datetime.now().isoformat(),
-     "data": {"aqi": v, "water_ph": 7.0, "pm25": v * 0.35, "is_critical": False}}
-    for v in [320, 340, 360, 370, 380]  # Rising trend for ML
-]
+
+def build_extra_history_payloads() -> List[Dict[str, Any]]:
+    """Send extra rounds to build a rising AQI trend for forecast tests."""
+    base = random.randint(300, 340)
+    increments = [0, random.randint(12, 22), random.randint(24, 34), random.randint(36, 46), random.randint(48, 60)]
+    values = [base + inc for inc in increments]
+    return [
+        {
+            "node_id": "EHS-AQI-001", "domain": "ehs", "node_type": "air_quality",
+            "timestamp": datetime.datetime.now().isoformat(),
+            "data": {
+                "aqi": v,
+                "water_ph": round(random.uniform(6.9, 7.3), 2),
+                "pm25": round(v * random.uniform(0.32, 0.40), 1),
+                "is_critical": False,
+            },
+        }
+        for v in values
+    ]
 
 
 # ═══════════════════════════════════════
@@ -339,11 +396,13 @@ def stop_server(process):
 def run_api_tests():
     """Execute all API endpoint tests and collect results."""
     import requests as req
+    test_payloads = build_test_payloads()
+    extra_history_payloads = build_extra_history_payloads()
 
     section("Step 2: Evaluating Telemetry (POST /evaluate)")
 
     # ── 2a. Send primary test payloads ──
-    for payload in TEST_PAYLOADS:
+    for payload in test_payloads:
         result = TestResult(
             name=f"Evaluate {payload['node_id']} ({payload['node_type']})",
             endpoint="/evaluate",
@@ -377,7 +436,7 @@ def run_api_tests():
 
     # ── 2b. Send extra history to build ML trends ──
     info("Sending 5 additional readings for ML history...")
-    for p in EXTRA_HISTORY_PAYLOADS:
+    for p in extra_history_payloads:
         try:
             req.post(f"{BASE_URL}/evaluate", json=p, timeout=EVALUATE_TIMEOUT_SECONDS)
         except Exception:

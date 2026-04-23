@@ -370,6 +370,10 @@
                     <div class="label">Actionable Suggestions</div>
                     <div class="value" id="suggestionCount">--</div>
                 </div>
+                <div class="stat">
+                    <div class="label">Refresh Snapshot</div>
+                    <div class="value" id="snapshotLabel">--</div>
+                </div>
             </aside>
         </section>
 
@@ -481,14 +485,16 @@
             const nodes = engine.total_nodes || 0;
             const suggestions = engine.suggestions || [];
             const prediction = payload.prediction;
+            const snapshot = engine.presentation_snapshot || {};
 
             document.getElementById('healthScore').textContent = `${engine.campus_health_score ?? '--'}`;
             document.getElementById('nodeTypes').textContent = `${catalog.length || '--'}`;
             document.getElementById('suggestionCount').textContent = `${suggestions.length || 0}`;
+            document.getElementById('snapshotLabel').textContent = snapshot.label || '--';
             document.getElementById('catalogCount').textContent = `${catalog.length}`;
             document.getElementById('catalogDetail').textContent = `${payload.middleware?.nodes?.total_ehs_nodes || 0} active records in middleware`;
             document.getElementById('visualCards').textContent = `${engine.metric_cards ? Object.keys(engine.metric_cards).length : 0}`;
-            document.getElementById('visualDetail').textContent = `${nodes} nodes feeding predictions, charts, and suggestions`;
+            document.getElementById('visualDetail').textContent = `${nodes} nodes feeding predictions, charts, and suggestions · tick ${snapshot.refresh_tick || '--'}`;
 
             if (prediction) {
                 const forecast = prediction.aqi_forecast || prediction.water_ph_forecast || prediction.noise_db_forecast || prediction.pm25_forecast;
@@ -533,7 +539,7 @@
                 setLog(lines);
                 setProgress(8);
 
-                const response = await fetch('/presentation-data');
+                const response = await fetch(`/presentation-data?ts=${Date.now()}`, { cache: 'no-store' });
                 const payload = await response.json();
                 state.payload = payload;
 
@@ -615,6 +621,9 @@
 
         document.getElementById('startDemo').addEventListener('click', runDemo);
         document.getElementById('resetDemo').addEventListener('click', resetView);
+        window.addEventListener('load', () => {
+            runDemo();
+        });
         resetView();
     </script>
 </body>
