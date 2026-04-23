@@ -1,44 +1,74 @@
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Access Management Service — Test Report</title>
-<style>body{font-family:Inter,sans-serif;background:#0a0e1a;color:#e2e8f0;padding:40px;}
-h1{color:#10b981;}table{width:100%;border-collapse:collapse;margin-top:20px;}
-th,td{padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.85rem;}
-th{color:#94a3b8;font-size:0.75rem;text-transform:uppercase;}</style></head>
-<body><h1>Access Management Service — Test Report</h1>
-<p>Generated: 2026-04-23T13:23:12.084495</p>
-<p style="font-size:1.2rem;font-weight:800;color:#10b981">33/33 tests passed</p>
-<table><thead><tr><th></th><th>Test</th><th>Detail</th><th>Time</th></tr></thead><tbody>
-<tr style="background:#1a2035"><td>✅</td><td>Health Check</td><td>Status=healthy, Backend=FileStorageBackend, Users=8</td><td>4ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Admin Login</td><td>Role=admin, Token=eyJhbGciOiJIUzI1NiIs...</td><td>4ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Invalid Login Rejected</td><td>Expected 401 received</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Analyst Login</td><td>User=analyst1</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Maintenance Login</td><td>User=maint1</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Researcher Login</td><td>User=researcher1</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Emergency_Responder Login</td><td>User=responder1</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Resident Login</td><td>User=resident1</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Admin Profile</td><td>Role=admin, Perms=11</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-SOL-001</td><td>ID=16a70757-74c domain=energy</td><td>2ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-BAT-001</td><td>ID=d5a8da98-7fc domain=energy</td><td>2ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-GRD-001</td><td>ID=d25ef810-589 domain=energy</td><td>1ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-AC-001</td><td>ID=7ad66f37-8e6 domain=energy</td><td>1ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-AQI-001</td><td>ID=0e5990e6-bbc domain=ehs</td><td>1ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-WTR-001</td><td>ID=cfd623b8-e0c domain=ehs</td><td>1ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-NOS-001</td><td>ID=cf954709-e24 domain=ehs</td><td>1ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Admin Query</td><td>34 records (all domains visible)</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Analyst Query</td><td>34 records, domains={'energy', 'ehs'}</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Responder Query</td><td>10 records, all_critical=True</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Resident Blocked</td><td>Expected 403 — no telemetry.read permission</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Unauth Blocked</td><td>Expected 401 for missing token</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Admin List Users</td><td>8 users</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Analyst Users Blocked</td><td>Expected 403 — no users.read permission</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Dashboard (admin)</td><td>Records=34, Alerts=10, Domains=2</td><td>2ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Dashboard (analyst)</td><td>Records=34, Alerts=10, Domains=2</td><td>2ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Dashboard (maintenance)</td><td>Records=34, Alerts=10, Domains=2</td><td>2ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Dashboard (researcher)</td><td>Records=34, Alerts=10, Domains=2</td><td>2ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Dashboard (emergency_responder)</td><td>Records=34, Alerts=10, Domains=2</td><td>2ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Dashboard (resident)</td><td>Records=34, Alerts=10, Domains=2</td><td>2ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>List Roles</td><td>8 roles defined</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Dashboard HTML</td><td>HTML page served (21428 bytes)</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Telemetry Stats</td><td>Domains: ['energy', 'ehs']</td><td>0ms</td></tr>
-<tr style="background:#1a2035"><td>✅</td><td>Alerts Query</td><td>10 alerts</td><td>0ms</td></tr>
-</tbody></table></body></html>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Test Report</title>
+<style>body{font-family:Inter,sans-serif;background:#0a0e1a;color:#e2e8f0;padding:40px}h1{color:#10b981}
+table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06);font-size:.85rem}
+th{color:#94a3b8;font-size:.75rem;text-transform:uppercase}</style></head>
+<body><h1>Access Management Service — Test Report</h1><p>Generated: 2026-04-23T15:40:49.484872</p>
+<p style="font-size:1.2rem;font-weight:800;color:#10b981">67/67 tests passed</p>
+<p>Architecture: Two Microservices (Ingestion + Gateway) | Database: SQLite (WAL)</p>
+<table><thead><tr><th></th><th>Test</th><th>Detail</th><th>Time</th></tr></thead><tbody><tr style="background:#1a2035"><td>✅</td><td>Ingestion Health</td><td>status=healthy, db=SQLite (WAL mode)</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Gateway Health</td><td>status=healthy, db=SQLite (WAL mode)</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login admin</td><td>user=admin</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login energy_manager</td><td>user=energy_raghuram</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login ehs_manager</td><td>user=ehs_saicharan</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login analyst</td><td>user=analyst_vikram</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login maintenance</td><td>user=maint_raju</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login researcher</td><td>user=researcher_ananya</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login resident</td><td>user=resident_arjun</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login emergency_responder</td><td>user=responder_reddy</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login operator</td><td>user=operator_tech</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Login campus_manager</td><td>user=manager_priya</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Invalid Login Rejected</td><td>401</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Admin Profile</td><td>perms=11, domains=['cam', 'ehs', 'energy', 'system']</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-SOL-001</td><td>domain=energy crit=False</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-BAT-001</td><td>domain=energy crit=True</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-GRD-001</td><td>domain=energy crit=True</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-MTR-001</td><td>domain=energy crit=True</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-AC-001</td><td>domain=energy crit=True</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-AQI-001</td><td>domain=ehs crit=True</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-WTR-001</td><td>domain=ehs crit=True</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-NOS-001</td><td>domain=ehs crit=False</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-WEA-001</td><td>domain=ehs crit=False</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest R1-SOL-001</td><td>domain=energy crit=False</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest R1-MTR-001</td><td>domain=energy crit=False</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest R1-BAT-001</td><td>domain=energy crit=False</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest R1-AC-001</td><td>domain=energy crit=False</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest R1-AQI-001</td><td>domain=ehs crit=False</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Batch Ingest</td><td>stored=20</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Admin Query (all)</td><td>34 records</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Energy Mgr Query</td><td>29 records, all_energy=True</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>EHS Mgr Query</td><td>5 records, all_ehs=True</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Responder Critical-Only</td><td>6 records, all_critical=True</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Operator Critical-Only</td><td>6 records, all_critical=True</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Resident Own Nodes</td><td>5 records, own_nodes_only=True</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Resident my-data</td><td>nodes=5, consumption=0W</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Unauth Blocked</td><td>401</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Admin List Users</td><td>12 users</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Analyst Users Blocked</td><td>403</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>List Nodes</td><td>33 nodes registered</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (admin)</td><td>readings=34, domains=3</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (energy_manager)</td><td>readings=29, domains=1</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (ehs_manager)</td><td>readings=5, domains=1</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (analyst)</td><td>readings=34, domains=3</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (maintenance)</td><td>readings=34, domains=2</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (researcher)</td><td>readings=34, domains=2</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (resident)</td><td>readings=34, domains=2</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (emergency_responder)</td><td>readings=34, domains=2</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (operator)</td><td>readings=34, domains=3</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (campus_manager)</td><td>readings=34, domains=3</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>List Roles</td><td>10 roles</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Telemetry Stats</td><td>3 domains</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Alerts (empty)</td><td>0 alerts — Alerts integration pending — Member 4</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Analyst Analytics</td><td>node_types=9, top_crit=6</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Node Health</td><td>33 nodes with status</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard HTML</td><td>29651 bytes</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Engine Health</td><td>rps=33.72, nodes=33</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>System Metrics</td><td>cpu=8 cores, usage=29.2%, mem=38.4MB, threads=2</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Engine Report</td><td>domains=2, faulty=0</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Fleet Status</td><td>33 nodes, 33 active</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Set Interval</td><td>new=2.0s</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Add Node</td><td>DYN-TEST-001 -> added</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Add Bulk Nodes</td><td>5 nodes added</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Remove Node</td><td>DYN-TEST-001 -> deactivated</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Control Panel HTML</td><td>15456 bytes</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>HLD Architecture HTML</td><td>21361 bytes</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Resident Control Blocked</td><td>403</td><td>0ms</td></tr></tbody></table></body></html>

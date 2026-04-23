@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Control Panel — Smart City</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root{--bg:#06090f;--bg2:#0d1422;--card:linear-gradient(145deg,rgba(19,28,46,.92),rgba(13,20,34,.96));--border:rgba(255,255,255,.06);--text:#e2e8f0;--muted:#64748b;--sub:#94a3b8;--accent:#6366f1;--accent2:#818cf8;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--orange:#f97316;--cyan:#22d3ee;--radius:16px}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 20%,rgba(99,102,241,.08),transparent 50%)}
+        .app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px}
+        .header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px}
+        .header h1{font-size:1rem;font-weight:900}
+        .header-links{display:flex;gap:6px}
+        .header-links a{padding:4px 10px;border-radius:100px;border:1px solid var(--border);color:var(--accent2);font-size:.65rem;font-weight:600;text-decoration:none;transition:all .2s}
+        .header-links a:hover{background:rgba(99,102,241,.1)}
+
+        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+        .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+        .panel h2{font-size:.78rem;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+        .panel h2 .dot{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+
+        .gauge{text-align:center;padding:10px 6px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid var(--border)}
+        .gauge .gv{font-size:1.3rem;font-weight:900}
+        .gauge .gl{font-size:.55rem;color:var(--muted);margin-top:2px;text-transform:uppercase}
+
+        .btn{padding:6px 13px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);font-size:.68rem;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+        .btn:hover{background:rgba(99,102,241,.1);border-color:var(--accent)}
+        .btn-green{border-color:rgba(16,185,129,.3);color:var(--green)}
+        .btn-red{border-color:rgba(239,68,68,.3);color:var(--red)}
+
+        .slider-group{margin-bottom:12px}
+        .slider-group label{font-size:.68rem;font-weight:600;color:var(--sub);display:flex;justify-content:space-between;margin-bottom:4px}
+        .slider-group label span{color:var(--accent2);font-weight:800}
+        input[type=range]{-webkit-appearance:none;width:100%;height:5px;border-radius:4px;background:rgba(255,255,255,.08);outline:none}
+        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent2);cursor:pointer}
+
+        .node-card{border:1px solid var(--border);border-radius:8px;padding:8px;background:rgba(255,255,255,.02);font-size:.66rem}
+        .node-card.critical{border-color:rgba(239,68,68,.3)}
+        .nc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+        .nc-id{font-weight:700;font-size:.7rem}
+        .badge{padding:1px 5px;border-radius:4px;font-size:.55rem;font-weight:700}
+        .badge-ok{background:rgba(16,185,129,.1);color:var(--green)}
+        .badge-crit{background:rgba(239,68,68,.15);color:var(--red)}
+        .badge-off{background:rgba(100,116,139,.15);color:var(--muted)}
+
+        .log{max-height:100px;overflow-y:auto;font-size:.6rem;font-family:'SF Mono',monospace;color:var(--sub);line-height:1.5;padding:6px;background:rgba(0,0,0,.3);border-radius:6px;margin-top:6px}
+        .log div{border-bottom:1px solid rgba(255,255,255,.02);padding:1px 0}
+
+        .add-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+        .add-row input,.add-row select{padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-size:.68rem;font-family:inherit}
+
+        .hidden{display:none!important}
+        .login-wrap{max-width:400px;margin:80px auto;text-align:center}
+        .login-btn{display:inline-block;padding:10px 20px;margin:6px;border-radius:10px;background:var(--card);border:1px solid var(--border);cursor:pointer;transition:all .2s}
+        .login-btn:hover{border-color:var(--accent);transform:translateY(-2px)}
+        .login-btn .rb-name{font-size:.8rem;font-weight:700}
+        .login-btn .rb-sub{font-size:.6rem;color:var(--muted)}
+        @media(max-width:768px){.grid2{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="app">
+    <div id="loginView" class="login-wrap">
+        <div style="font-size:2rem;margin-bottom:8px">🎛️</div>
+        <h1 style="font-size:1.2rem;margin-bottom:6px">IoT Control Panel</h1>
+        <p style="color:var(--muted);font-size:.72rem;margin-bottom:14px">Manage data rate & nodes</p>
+        <div class="login-btn" onclick="quickLogin('admin','admin123')"><div class="rb-name">🛡️ Admin</div><div class="rb-sub">admin</div></div>
+        <div class="login-btn" onclick="quickLogin('manager_priya','manager123')"><div class="rb-name">🏛️ Manager</div><div class="rb-sub">manager_priya</div></div>
+    </div>
+
+    <div id="ctrlView" class="hidden">
+        <header class="header">
+            <h1>🎛️ IoT Control Panel</h1>
+            <div class="header-links">
+                <a href="/dashboard">📊 Dashboard</a>
+                <a href="/hld-architecture">🏗️ HLD</a>
+                <a href="#" onclick="doLogout()">🔄 Switch</a>
+            </div>
+        </header>
+
+        <!-- ENGINE STATUS -->
+        <div class="panel">
+            <h2><span class="dot"></span>Engine Status</h2>
+            <div class="grid4" id="engineGauges">Loading...</div>
+        </div>
+
+        <div class="grid2">
+            <!-- DATA RATE CONTROL -->
+            <div class="panel">
+                <h2><span class="dot"></span>Data Rate Control</h2>
+                <div class="slider-group">
+                    <label>⏱️ Streaming Interval <span id="intVal">1.5s</span></label>
+                    <input type="range" id="intSlider" min="0.3" max="5" value="1.5" step="0.1" oninput="document.getElementById('intVal').textContent=this.value+'s'">
+                </div>
+                <div style="display:flex;gap:6px;margin-bottom:8px">
+                    <button class="btn" onclick="setInterval2(0.5)">🚀 Fast (0.5s)</button>
+                    <button class="btn" onclick="setInterval2(1.5)">⏱️ Normal (1.5s)</button>
+                    <button class="btn" onclick="setInterval2(3.0)">🐌 Slow (3s)</button>
+                    <button class="btn btn-green" onclick="applyInterval()">✅ Apply</button>
+                </div>
+
+                <h2 style="margin-top:10px"><span class="dot"></span>Add Nodes (Bulk)</h2>
+                <div class="add-row">
+                    <select id="addType" style="flex:1">
+                        <option value="solar_panel">Solar Panel</option>
+                        <option value="smart_meter">Smart Meter</option>
+                        <option value="battery_storage">Battery</option>
+                        <option value="air_quality">Air Quality</option>
+                        <option value="noise_monitor">Noise Monitor</option>
+                    </select>
+                    <select id="addDomain">
+                        <option value="energy">energy</option>
+                        <option value="ehs">ehs</option>
+                    </select>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    <button class="btn btn-green" onclick="addBulk(5)">➕ 5</button>
+                    <button class="btn btn-green" onclick="addBulk(10)">➕ 10</button>
+                    <button class="btn btn-green" onclick="addBulk(20)">➕ 20</button>
+                    <button class="btn btn-green" onclick="addBulk(50)">⚡ 50</button>
+                </div>
+                <div class="log" id="ctrlLog"></div>
+            </div>
+
+            <!-- SINGLE NODE ADD/REMOVE -->
+            <div class="panel">
+                <h2><span class="dot"></span>Individual Node Management</h2>
+                <div class="add-row">
+                    <input id="newNodeId" placeholder="Node ID (e.g. MY-SOL-001)" style="flex:2">
+                    <select id="newNodeType" style="flex:1">
+                        <option value="solar_panel">Solar Panel</option>
+                        <option value="smart_meter">Smart Meter</option>
+                        <option value="battery_storage">Battery</option>
+                        <option value="air_quality">Air Quality</option>
+                    </select>
+                    <button class="btn btn-green" onclick="addSingle()">➕ Add</button>
+                </div>
+                <div style="font-size:.62rem;color:var(--muted);margin:6px 0 4px">Active fleet (click ✕ to remove):</div>
+                <div id="fleetList" style="max-height:260px;overflow-y:auto;font-size:.66rem"></div>
+            </div>
+        </div>
+
+        <!-- FLEET HEALTH GRID -->
+        <div class="panel">
+            <h2><span class="dot"></span>Fleet Health (<span id="fleetCount">0</span> nodes)</h2>
+            <div class="grid4" id="fleetGrid">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API='';
+let TOKEN=localStorage.getItem('sc_ctrl_token');
+
+async function quickLogin(u,p){
+    const res=await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    if(!res.ok){alert('Login failed');return}
+    const d=await res.json();TOKEN=d.access_token;localStorage.setItem('sc_ctrl_token',TOKEN);
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('ctrlView').classList.remove('hidden');
+    refresh();
+}
+function doLogout(){TOKEN=null;localStorage.removeItem('sc_ctrl_token');document.getElementById('loginView').classList.remove('hidden');document.getElementById('ctrlView').classList.add('hidden')}
+async function authFetch(url){const r=await fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}});if(r.status===401)doLogout();return r}
+async function authPost(url,body){return fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},body:JSON.stringify(body)})}
+
+function log(msg){const el=document.getElementById('ctrlLog');const t=new Date().toLocaleTimeString();el.innerHTML=`<div>${t} — ${msg}</div>`+el.innerHTML;if(el.children.length>20)el.removeChild(el.lastChild)}
+
+function setInterval2(v){document.getElementById('intSlider').value=v;document.getElementById('intVal').textContent=v+'s';applyInterval()}
+async function applyInterval(){
+    const v=+document.getElementById('intSlider').value;
+    await authPost(`${API}/api/v1/control/set-interval`,{interval:v});
+    log(`⏱️ Interval set to ${v}s`);
+}
+
+async function addBulk(count){
+    const nt=document.getElementById('addType').value;
+    const dom=document.getElementById('addDomain').value;
+    const r=await authPost(`${API}/api/v1/control/add-bulk-nodes`,{count,domain:dom,node_type:nt,prefix:'DYN'});
+    const d=await r.json();
+    log(`➕ Added ${d.count||count} ${nt} nodes`);
+    setTimeout(refresh,1500);
+}
+
+async function addSingle(){
+    const nid=document.getElementById('newNodeId').value.trim();
+    const nt=document.getElementById('newNodeType').value;
+    if(!nid){alert('Enter Node ID');return}
+    await authPost(`${API}/api/v1/control/add-node`,{node_id:nid,domain:'energy',node_type:nt});
+    log(`➕ Added: ${nid}`);
+    document.getElementById('newNodeId').value='';
+    setTimeout(refresh,1000);
+}
+
+async function removeNode(nid){
+    if(!confirm(`Remove ${nid}?`))return;
+    await authPost(`${API}/api/v1/control/remove-node`,{node_id:nid});
+    log(`🗑️ Removed: ${nid}`);
+    setTimeout(refresh,500);
+}
+
+async function refreshEngine(){
+    try{
+        const r=await authFetch(`${API}/api/v1/engine-health`);const d=await r.json();
+        const sys=d.system||{};
+        const el=document.getElementById('engineGauges');
+        const g=(l,v,c)=>`<div class="gauge"><div class="gv" style="color:${c}">${v}</div><div class="gl">${l}</div></div>`;
+        el.innerHTML=g('Records/sec',d.records_per_second,'var(--cyan)')+g('Total',(d.total_ingested||0).toLocaleString(),'var(--accent2)')+g('Avg Latency',d.avg_latency_ms+'ms','var(--green)')+g('Active Nodes',d.active_nodes,'var(--cyan)')+g('CPU',sys.cpu_usage_pct+'%',sys.cpu_usage_pct>80?'var(--red)':'var(--green)')+g('Memory',sys.memory_mb+'MB','var(--orange)')+g('Threads',sys.thread_count,'var(--accent2)')+g('Errors',d.total_errors,d.total_errors>0?'var(--red)':'var(--green)');
+        document.getElementById('intSlider').value=d.interval||1.5;
+        document.getElementById('intVal').textContent=(d.interval||1.5)+'s';
+    }catch(e){document.getElementById('engineGauges').innerHTML='<span style="color:var(--red)">Error</span>'}
+}
+
+async function refreshFleet(){
+    try{
+        const r=await authFetch(`${API}/api/v1/fleet-status`);const d=await r.json();
+        document.getElementById('fleetCount').textContent=d.count;
+        const grid=document.getElementById('fleetGrid');
+        const list=document.getElementById('fleetList');
+        let gh='',lh='';
+        for(const n of (d.nodes||[])){
+            const h=n.health||{};
+            const crit=h.is_critical;const fc=h.fault_code||0;
+            const cls=!n.is_active?'':(crit?'critical':'');            const badge=!n.is_active?'badge-off':crit?'badge-crit':'badge-ok';
+            const txt=!n.is_active?'OFF':crit?'CRIT':fc>0?'F'+fc:'OK';
+            const bat=h.battery_level_pct;
+            const batC=bat!=null?(bat<20?'var(--red)':bat<40?'var(--yellow)':'var(--green)'):'var(--muted)';
+            gh+=`<div class="node-card ${crit?'critical':''}"><div class="nc-top"><span class="nc-id">${n.node_id}</span><span class="badge ${badge}">${txt}</span></div><div style="color:var(--muted)">${n.type_name||''} · ${n.domain}${bat!=null?` · <span style="color:${batC}">🔋${bat}%</span>`:''}</div></div>`;
+            if(n.is_active)lh+=`<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>${n.node_id} <span style="color:var(--muted)">${n.type_name}</span></span><button class="btn btn-red" style="padding:1px 5px;font-size:.55rem" onclick="removeNode('${n.node_id}')">✕</button></div>`;
+        }
+        grid.innerHTML=gh;list.innerHTML=lh;
+    }catch(e){document.getElementById('fleetGrid').innerHTML='<span style="color:var(--red)">Error</span>'}
+}
+
+function refresh(){refreshEngine();refreshFleet()}
+if(TOKEN){document.getElementById('loginView').classList.add('hidden');document.getElementById('ctrlView').classList.remove('hidden');refresh()}
+setInterval(()=>{if(TOKEN)refresh()},5000);
+</script>
+</body>
+</html>

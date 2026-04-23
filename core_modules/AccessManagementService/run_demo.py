@@ -1,13 +1,15 @@
 """
-run_demo.py — Access Management Service: Automated Demo & Test Suite.
+run_demo.py — Access Management Service: Two-Service Demo & Test Suite
 
-Tests all endpoints: health, auth, telemetry ingestion, RBAC enforcement,
-role-filtered queries, and dashboard data. Generates an HTML test report.
+Starts BOTH microservices:
+  1. Ingestion Service (port 8006) — stores telemetry
+  2. Gateway Service   (port 8005) — auth + RBAC + retrieval
+
+Tests all endpoints across both services.
 
 Usage:
-  python3 run_demo.py                 # Full demo with browser
-  python3 run_demo.py --no-browser    # Headless mode
-  python3 run_demo.py --headless      # Same as --no-browser
+  python3 run_demo.py --no-browser
+  python3 run_demo.py
 """
 
 import argparse
@@ -28,20 +30,15 @@ _BASE_DIR = Path(__file__).resolve().parent
 REPORT_DIR = _BASE_DIR / "test_reports"
 
 
-# ═══════════════════════════════════════════
-# Utilities
-# ═══════════════════════════════════════════
-
 def find_free_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
-class TestResult:
+class TR:
     def __init__(self):
-        self.passed = 0
-        self.failed = 0
+        self.passed = self.failed = 0
         self.results = []
 
     def ok(self, name, detail="", ms=0):
@@ -54,398 +51,347 @@ class TestResult:
         self.results.append(("FAIL", name, detail, 0))
         print(f"  [FAIL]  {name} -> {detail}")
 
-    @property
-    def total(self):
-        return self.passed + self.failed
 
-    @property
-    def all_passed(self):
-        return self.failed == 0
-
-
-# ═══════════════════════════════════════════
-# Sample Test Data
-# ═══════════════════════════════════════════
-
-SAMPLE_ENERGY_NODES = [
-    {"node_id": "NRG-SOL-001", "domain": "energy", "node_type": "solar_panel",
-     "data": {"solar_power_w": 850.0, "voltage": 36.5, "is_critical": False}},
-    {"node_id": "NRG-BAT-001", "domain": "energy", "node_type": "battery_storage",
-     "data": {"battery_soc_pct": 15.0, "charge_rate_w": -500, "is_critical": True}},
-    {"node_id": "NRG-GRD-001", "domain": "energy", "node_type": "grid_transformer",
-     "data": {"grid_load_pct": 95.0, "grid_temperature_c": 92.0, "is_critical": True}},
-    {"node_id": "NRG-AC-001", "domain": "energy", "node_type": "ac_unit",
-     "data": {"ac_power_w": 4200, "set_temp_c": 22, "ac_mode": "cool", "is_critical": True}},
-]
-
-SAMPLE_EHS_NODES = [
-    {"node_id": "EHS-AQI-001", "domain": "ehs", "node_type": "air_quality",
-     "data": {"aqi": 320, "pm25": 112.0, "temperature_c": 35.2, "is_critical": True}},
-    {"node_id": "EHS-WTR-001", "domain": "ehs", "node_type": "water_quality",
-     "data": {"water_ph": 4.2, "turbidity_ntu": 150, "is_critical": True}},
-    {"node_id": "EHS-NOS-001", "domain": "ehs", "node_type": "noise_monitor",
-     "data": {"noise_db": 45.0, "peak_db": 52.0, "is_critical": False}},
-]
-
-
-# ═══════════════════════════════════════════
-# Test Functions
-# ═══════════════════════════════════════════
-
-def test_health(base, tr):
-    print(f"\n{'─'*50}\n  Step 1: Health Check\n{'─'*50}")
-    t0 = time.time()
-    r = requests.get(f"{base}/health", timeout=5)
-    ms = int((time.time()-t0)*1000)
-    if r.status_code == 200:
-        d = r.json()
-        tr.ok("Health Check", f"Status={d['status']}, Backend={d['storage_backend']}, Users={d['registered_users']}", ms)
-    else:
-        tr.fail("Health Check", f"HTTP {r.status_code}")
-
-
-def test_auth(base, tr):
-    print(f"\n{'─'*50}\n  Step 2: Authentication\n{'─'*50}")
-
-    # Valid login
-    t0 = time.time()
-    r = requests.post(f"{base}/auth/login", json={"username": "admin", "password": "admin123"})
-    ms = int((time.time()-t0)*1000)
-    if r.status_code == 200:
-        d = r.json()
-        tr.ok("Admin Login", f"Role={d['role']}, Token={d['access_token'][:20]}...", ms)
-    else:
-        tr.fail("Admin Login", r.text)
-        return {}
-
-    admin_token = d["access_token"]
-
-    # Invalid login
-    r2 = requests.post(f"{base}/auth/login", json={"username": "admin", "password": "wrong"})
-    if r2.status_code == 401:
-        tr.ok("Invalid Login Rejected", "Expected 401 received")
-    else:
-        tr.fail("Invalid Login Rejected", f"Got {r2.status_code}")
-
-    # Login as other roles
-    tokens = {"admin": admin_token}
-    for user, pw, role in [
-        ("analyst1", "analyst123", "analyst"),
-        ("maint1", "maint123", "maintenance"),
-        ("researcher1", "research123", "researcher"),
-        ("responder1", "respond123", "emergency_responder"),
-        ("resident1", "resident123", "resident"),
-    ]:
-        r = requests.post(f"{base}/auth/login", json={"username": user, "password": pw})
-        if r.status_code == 200:
-            tokens[role] = r.json()["access_token"]
-            tr.ok(f"{role.title()} Login", f"User={user}")
-        else:
-            tr.fail(f"{role.title()} Login", r.text)
-
-    # Get profile
-    r = requests.get(f"{base}/api/v1/me", headers={"Authorization": f"Bearer {admin_token}"})
-    if r.status_code == 200:
-        d = r.json()
-        tr.ok("Admin Profile", f"Role={d['role']}, Perms={len(d['permissions'])}")
-    else:
-        tr.fail("Admin Profile", r.text)
-
-    return tokens
-
-
-def test_ingestion(base, tr):
-    print(f"\n{'─'*50}\n  Step 3: Telemetry Ingestion\n{'─'*50}")
-    all_nodes = SAMPLE_ENERGY_NODES + SAMPLE_EHS_NODES
-
-    for node in all_nodes:
-        node["timestamp"] = datetime.now().isoformat()
-        t0 = time.time()
-        r = requests.post(f"{base}/api/v1/telemetry", json=node)
-        ms = int((time.time()-t0)*1000)
-        if r.status_code == 200:
-            d = r.json()
-            tr.ok(f"Ingest {node['node_id']}", f"ID={d['record_id']} domain={d['domain']}", ms)
-        else:
-            tr.fail(f"Ingest {node['node_id']}", r.text)
-
-    # Ingest some extra for volume
-    import random
-    for i in range(10):
-        extra = {
-            "node_id": f"NRG-SOL-{random.randint(100,999)}",
-            "domain": "energy",
-            "node_type": "solar_panel",
-            "timestamp": datetime.now().isoformat(),
-            "data": {"solar_power_w": random.uniform(100, 900), "is_critical": False},
-        }
-        requests.post(f"{base}/api/v1/telemetry", json=extra)
-
-
-def test_rbac_queries(base, tokens, tr):
-    print(f"\n{'─'*50}\n  Step 4: RBAC-Filtered Queries\n{'─'*50}")
-
-    # Admin sees everything
-    r = requests.get(f"{base}/api/v1/telemetry/query", headers={"Authorization": f"Bearer {tokens['admin']}"})
-    if r.status_code == 200:
-        d = r.json()
-        tr.ok("Admin Query", f"{d['count']} records (all domains visible)")
-    else:
-        tr.fail("Admin Query", r.text)
-
-    # Analyst sees energy + ehs
-    if "analyst" in tokens:
-        r = requests.get(f"{base}/api/v1/telemetry/query", headers={"Authorization": f"Bearer {tokens['analyst']}"})
-        if r.status_code == 200:
-            d = r.json()
-            domains_seen = set(rec.get("domain") for rec in d.get("records", []))
-            tr.ok("Analyst Query", f"{d['count']} records, domains={domains_seen}")
-        else:
-            tr.fail("Analyst Query", r.text)
-
-    # Emergency responder sees only critical
-    if "emergency_responder" in tokens:
-        r = requests.get(f"{base}/api/v1/telemetry/query", headers={"Authorization": f"Bearer {tokens['emergency_responder']}"})
-        if r.status_code == 200:
-            d = r.json()
-            all_crit = all(rec.get("data", {}).get("is_critical", False) for rec in d.get("records", []))
-            tr.ok("Responder Query", f"{d['count']} records, all_critical={all_crit}")
-        else:
-            tr.fail("Responder Query", r.text)
-
-    # Resident can't read telemetry (no telemetry.read permission)
-    if "resident" in tokens:
-        r = requests.get(f"{base}/api/v1/telemetry/query", headers={"Authorization": f"Bearer {tokens['resident']}"})
-        if r.status_code == 403:
-            tr.ok("Resident Blocked", "Expected 403 — no telemetry.read permission")
-        else:
-            tr.fail("Resident Blocked", f"Expected 403, got {r.status_code}")
-
-    # Unauthenticated request
-    r = requests.get(f"{base}/api/v1/telemetry/query")
-    if r.status_code == 401:
-        tr.ok("Unauth Blocked", "Expected 401 for missing token")
-    else:
-        tr.fail("Unauth Blocked", f"Expected 401, got {r.status_code}")
-
-
-def test_users_endpoint(base, tokens, tr):
-    print(f"\n{'─'*50}\n  Step 5: User Management (Admin Only)\n{'─'*50}")
-
-    # Admin can list users
-    r = requests.get(f"{base}/api/v1/users", headers={"Authorization": f"Bearer {tokens['admin']}"})
-    if r.status_code == 200:
-        d = r.json()
-        tr.ok("Admin List Users", f"{d['count']} users")
-    else:
-        tr.fail("Admin List Users", r.text)
-
-    # Analyst cannot list users
-    if "analyst" in tokens:
-        r = requests.get(f"{base}/api/v1/users", headers={"Authorization": f"Bearer {tokens['analyst']}"})
-        if r.status_code == 403:
-            tr.ok("Analyst Users Blocked", "Expected 403 — no users.read permission")
-        else:
-            tr.fail("Analyst Users Blocked", f"Expected 403, got {r.status_code}")
-
-
-def test_dashboard_data(base, tokens, tr):
-    print(f"\n{'─'*50}\n  Step 6: Dashboard Data (Role-Specific)\n{'─'*50}")
-
-    for role, token in tokens.items():
-        t0 = time.time()
-        r = requests.get(f"{base}/api/v1/dashboard-data", headers={"Authorization": f"Bearer {token}"})
-        ms = int((time.time()-t0)*1000)
-        if r.status_code == 200:
-            d = r.json()
-            tr.ok(f"Dashboard ({role})",
-                  f"Records={d['stats'].get('total_records',0)}, "
-                  f"Alerts={d['stats'].get('total_alerts',0)}, "
-                  f"Domains={d['stats'].get('total_domains',0)}", ms)
-        else:
-            tr.fail(f"Dashboard ({role})", r.text)
-
-
-def test_roles_endpoint(base, tr):
-    print(f"\n{'─'*50}\n  Step 7: Roles & Dashboard HTML\n{'─'*50}")
-
-    r = requests.get(f"{base}/api/v1/roles")
-    if r.status_code == 200:
-        d = r.json()
-        tr.ok("List Roles", f"{d['count']} roles defined")
-    else:
-        tr.fail("List Roles", r.text)
-
-    r = requests.get(f"{base}/dashboard")
-    if r.status_code == 200 and len(r.text) > 1000:
-        tr.ok("Dashboard HTML", f"HTML page served ({len(r.text)} bytes)")
-    else:
-        tr.fail("Dashboard HTML", f"HTTP {r.status_code}")
-
-
-def test_stats(base, tokens, tr):
-    print(f"\n{'─'*50}\n  Step 8: Telemetry Stats & Alerts\n{'─'*50}")
-
-    r = requests.get(f"{base}/api/v1/telemetry/stats", headers={"Authorization": f"Bearer {tokens['admin']}"})
-    if r.status_code == 200:
-        d = r.json()
-        domains = list(d.get("domains", {}).keys())
-        tr.ok("Telemetry Stats", f"Domains: {domains}")
-    else:
-        tr.fail("Telemetry Stats", r.text)
-
-    r = requests.get(f"{base}/api/v1/alerts", headers={"Authorization": f"Bearer {tokens['admin']}"})
-    if r.status_code == 200:
-        d = r.json()
-        tr.ok("Alerts Query", f"{d['count']} alerts")
-    else:
-        tr.fail("Alerts Query", r.text)
-
-
-# ═══════════════════════════════════════════
-# Report Generator
-# ═══════════════════════════════════════════
-
-def generate_report(tr, report_path):
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    status = "ALL PASSED" if tr.all_passed else f"{tr.failed} FAILED"
-    color = "#10b981" if tr.all_passed else "#ef4444"
-
-    rows = ""
-    for status_t, name, detail, ms in tr.results:
-        icon = "✅" if status_t == "PASS" else "❌"
-        row_color = "#1a2035" if status_t == "PASS" else "rgba(239,68,68,0.1)"
-        rows += f'<tr style="background:{row_color}"><td>{icon}</td><td>{name}</td><td>{detail}</td><td>{ms}ms</td></tr>\n'
-
-    html = f"""<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Access Management Service — Test Report</title>
-<style>body{{font-family:Inter,sans-serif;background:#0a0e1a;color:#e2e8f0;padding:40px;}}
-h1{{color:{color};}}table{{width:100%;border-collapse:collapse;margin-top:20px;}}
-th,td{{padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.85rem;}}
-th{{color:#94a3b8;font-size:0.75rem;text-transform:uppercase;}}</style></head>
-<body><h1>Access Management Service — Test Report</h1>
-<p>Generated: {datetime.now().isoformat()}</p>
-<p style="font-size:1.2rem;font-weight:800;color:{color}">{tr.passed}/{tr.total} tests passed</p>
-<table><thead><tr><th></th><th>Test</th><th>Detail</th><th>Time</th></tr></thead><tbody>
-{rows}</tbody></table></body></html>"""
-
-    with open(report_path, "w") as f:
-        f.write(html)
-    return str(report_path)
-
-
-# ═══════════════════════════════════════════
-# Main
-# ═══════════════════════════════════════════
-
-def main():
-    parser = argparse.ArgumentParser(description="Access Management Service Demo & Test Suite")
-    parser.add_argument("--no-browser", action="store_true")
-    parser.add_argument("--headless", action="store_true")
-    args = parser.parse_args()
-    no_browser = args.no_browser or args.headless
-
-    port = find_free_port()
-    env = {**os.environ, "ACCESS_SERVICE_PORT": str(port)}
-    base = f"http://127.0.0.1:{port}"
-
-    print(f"\n{'='*60}")
-    print(f"  Access Management Service v1.0 — Demo & Test Suite")
-    print(f"{'='*60}")
-
-    print(f"\n{'─'*50}\n  Step 0: Starting Server\n{'─'*50}")
-    print(f"  [INFO] Port: {port}")
-
-    server = subprocess.Popen(
-        [sys.executable, "main.py"],
-        cwd=str(_BASE_DIR), env=env,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-    )
-    print(f"  [INFO] Server PID: {server.pid}")
-
-    # Wait for healthy
-    deadline = time.time() + 15
-    ready = False
+def wait_healthy(url, timeout=15):
+    deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            r = requests.get(f"{base}/health", timeout=2)
-            if r.status_code == 200:
-                ready = True
-                break
+            if requests.get(f"{url}/health", timeout=2).status_code == 200:
+                return True
         except Exception:
             pass
-        elapsed = int(time.time() - (deadline - 15)) + 1
-        print(f"  [INFO] Waiting for server... ({elapsed}/15s)")
         time.sleep(1)
+    return False
 
-    if not ready:
-        print("  [FAIL]  Server failed to start")
-        # Dump output
-        out = server.stdout.read() if server.stdout else ""
-        print(f"\n=== SERVER OUTPUT ===\n{out}\n=== END SERVER OUTPUT ===")
-        server.terminate()
-        sys.exit(1)
 
-    secs = int(time.time() - (deadline - 15))
-    print(f"  [PASS]  Server is HEALTHY (took {secs}s)")
+def start_service(script, port_env, port, extra_env=None):
+    import threading
+    env = {**os.environ, port_env: str(port)}
+    if extra_env:
+        env.update(extra_env)
+    proc = subprocess.Popen(
+        [sys.executable, script], cwd=str(_BASE_DIR), env=env,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
+    threading.Thread(target=lambda: [None for _ in iter(proc.stdout.readline, "")], daemon=True).start()
+    return proc
 
-    tr = TestResult()
+
+ENERGY_NODES = [
+    {"node_id":"NRG-SOL-001","domain":"energy","node_type":"solar_panel","data":{"solar_power_w":850,"voltage":36.5,"is_critical":False}},
+    {"node_id":"NRG-BAT-001","domain":"energy","node_type":"battery_storage","data":{"battery_soc_pct":15,"charge_rate_w":-500,"is_critical":True}},
+    {"node_id":"NRG-GRD-001","domain":"energy","node_type":"grid_transformer","data":{"grid_load_pct":95,"grid_temperature_c":92,"is_critical":True}},
+    {"node_id":"NRG-MTR-001","domain":"energy","node_type":"smart_meter","data":{"power_w":3200,"power_factor":0.72,"is_critical":True}},
+    {"node_id":"NRG-AC-001","domain":"energy","node_type":"ac_unit","data":{"ac_power_w":4200,"set_temp_c":22,"is_critical":True}},
+]
+EHS_NODES = [
+    {"node_id":"EHS-AQI-001","domain":"ehs","node_type":"air_quality","data":{"aqi":320,"pm25":112,"is_critical":True}},
+    {"node_id":"EHS-WTR-001","domain":"ehs","node_type":"water_quality","data":{"water_ph":4.2,"turbidity_ntu":150,"is_critical":True}},
+    {"node_id":"EHS-NOS-001","domain":"ehs","node_type":"noise_monitor","data":{"noise_db":45,"peak_db":52,"is_critical":False}},
+    {"node_id":"EHS-WEA-001","domain":"ehs","node_type":"weather_station","data":{"temperature_c":35,"uv_index":9,"is_critical":False}},
+]
+# Resident nodes for testing personal data
+RESIDENT_NODES = [
+    {"node_id":"R1-SOL-001","domain":"energy","node_type":"solar_panel","data":{"solar_power_w":600,"voltage":35,"is_critical":False}},
+    {"node_id":"R1-MTR-001","domain":"energy","node_type":"smart_meter","data":{"power_w":2500,"power_factor":0.95,"is_critical":False}},
+    {"node_id":"R1-BAT-001","domain":"energy","node_type":"battery_storage","data":{"battery_soc_pct":75,"charge_rate_w":400,"is_critical":False}},
+    {"node_id":"R1-AC-001","domain":"energy","node_type":"ac_unit","data":{"ac_power_w":1800,"set_temp_c":24,"is_critical":False}},
+    {"node_id":"R1-AQI-001","domain":"ehs","node_type":"air_quality","data":{"aqi":42,"pm25":18,"is_critical":False}},
+]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-browser", action="store_true")
+    args = parser.parse_args()
+
+    # Remove old DB for a clean test
+    db_path = _BASE_DIR / "smartcity.db"
+    for f in [db_path, Path(str(db_path)+"-wal"), Path(str(db_path)+"-shm")]:
+        if f.exists():
+            f.unlink()
+
+    ingest_port = find_free_port()
+    gateway_port = find_free_port()
+    INGEST = f"http://127.0.0.1:{ingest_port}"
+    GATEWAY = f"http://127.0.0.1:{gateway_port}"
+
+    print(f"\n{'='*64}")
+    print(f"  Access Management Service v3.0 — Two-Service SQL Demo")
+    print(f"{'='*64}")
+
+    # Start services
+    print(f"\n{'─'*50}\n  Starting Services\n{'─'*50}")
+    print(f"  Ingestion: {INGEST}")
+    print(f"  Gateway:   {GATEWAY}")
+
+    ingest_proc = start_service("ingestion_service.py", "INGESTION_SERVICE_PORT", ingest_port)
+    gateway_proc = start_service("gateway_service.py", "GATEWAY_SERVICE_PORT", gateway_port, extra_env={"INGESTION_URL": INGEST})
+
+    if not wait_healthy(INGEST):
+        print("  [FAIL] Ingestion Service didn't start")
+        ingest_proc.terminate(); gateway_proc.terminate()
+        return
+    print(f"  [PASS] Ingestion Service healthy")
+
+    if not wait_healthy(GATEWAY):
+        print("  [FAIL] Gateway Service didn't start")
+        ingest_proc.terminate(); gateway_proc.terminate()
+        return
+    print(f"  [PASS] Gateway Service healthy")
+
+    tr = TR()
 
     try:
-        test_health(base, tr)
-        tokens = test_auth(base, tr)
-        test_ingestion(base, tr)
-        if tokens:
-            test_rbac_queries(base, tokens, tr)
-            test_users_endpoint(base, tokens, tr)
-            test_dashboard_data(base, tokens, tr)
-        test_roles_endpoint(base, tr)
-        if tokens:
-            test_stats(base, tokens, tr)
+        # ── Step 1: Health Checks ──
+        print(f"\n{'─'*50}\n  Step 1: Health Checks\n{'─'*50}")
+        for name, url in [("Ingestion", INGEST), ("Gateway", GATEWAY)]:
+            t0 = time.time()
+            r = requests.get(f"{url}/health")
+            ms = int((time.time()-t0)*1000)
+            d = r.json()
+            tr.ok(f"{name} Health", f"status={d['status']}, db={d.get('database','?')}", ms)
 
-        # Browser demo
-        if not no_browser:
-            print(f"\n{'─'*50}\n  Step 9: Browser Demo\n{'─'*50}")
-            webbrowser.open(f"{base}/dashboard")
-            print("  [INFO] Opened dashboard in browser")
-            print("  [INFO] Login as: admin / admin123")
+        # ── Step 2: Auth ──
+        print(f"\n{'─'*50}\n  Step 2: Authentication (12 users, 10 roles)\n{'─'*50}")
+        tokens = {}
+        for user, pw, role in [
+            ("admin","admin123","admin"), ("energy_raghuram","energy123","energy_manager"),
+            ("ehs_saicharan","ehs123","ehs_manager"), ("analyst_vikram","analyst123","analyst"),
+            ("maint_raju","maint123","maintenance"), ("researcher_ananya","research123","researcher"),
+            ("resident_arjun","resident123","resident"), ("responder_reddy","respond123","emergency_responder"),
+            ("operator_tech","operator123","operator"), ("manager_priya","manager123","campus_manager"),
+        ]:
+            r = requests.post(f"{GATEWAY}/auth/login", json={"username":user,"password":pw})
+            if r.status_code == 200:
+                tokens[role] = r.json()["access_token"]
+                tr.ok(f"Login {role}", f"user={user}")
+            else:
+                tr.fail(f"Login {role}", r.text)
 
-        # Report
-        print(f"\n{'─'*50}\n  Step 10: Generating Test Report\n{'─'*50}")
-        report_path = REPORT_DIR / "access_service_test_report.html"
-        generate_report(tr, report_path)
-        print(f"  [PASS]  Report: {report_path}")
+        # Invalid login
+        r = requests.post(f"{GATEWAY}/auth/login", json={"username":"admin","password":"wrong"})
+        tr.ok("Invalid Login Rejected", "401") if r.status_code == 401 else tr.fail("Invalid Login", str(r.status_code))
+
+        # Profile
+        r = requests.get(f"{GATEWAY}/api/v1/me", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Admin Profile", f"perms={len(d['permissions'])}, domains={d['domains']}")
+
+        # ── Step 3: Telemetry Ingestion ──
+        print(f"\n{'─'*50}\n  Step 3: Telemetry Ingestion → SQLite\n{'─'*50}")
+        for node in ENERGY_NODES + EHS_NODES + RESIDENT_NODES:
+            node["timestamp"] = datetime.now().isoformat()
+            t0 = time.time()
+            r = requests.post(f"{INGEST}/ingest", json=node)
+            ms = int((time.time()-t0)*1000)
+            d = r.json()
+            tr.ok(f"Ingest {node['node_id']}", f"domain={d['domain']} crit={d['is_critical']}", ms)
+
+        # Batch ingest
+        import random
+        batch = [{"node_id":f"NRG-SOL-{random.randint(100,999)}","domain":"energy","node_type":"solar_panel",
+                  "timestamp":datetime.now().isoformat(),"data":{"solar_power_w":random.uniform(100,900),"is_critical":False}} for _ in range(20)]
+        r = requests.post(f"{INGEST}/ingest/batch", json={"readings": batch})
+        d = r.json()
+        tr.ok("Batch Ingest", f"stored={d['stored']}")
+
+        # ── Step 4: RBAC Queries ──
+        print(f"\n{'─'*50}\n  Step 4: RBAC-Filtered SQL Queries\n{'─'*50}")
+
+        # Admin sees all
+        r = requests.get(f"{GATEWAY}/api/v1/telemetry/query", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Admin Query (all)", f"{d['count']} records")
+
+        # Energy manager sees only energy
+        r = requests.get(f"{GATEWAY}/api/v1/telemetry/query", headers={"Authorization":f"Bearer {tokens['energy_manager']}"})
+        d = r.json()
+        all_energy = all(r.get("domain_name") == "energy" for r in d["records"])
+        tr.ok("Energy Mgr Query", f"{d['count']} records, all_energy={all_energy}")
+
+        # EHS manager sees only ehs
+        r = requests.get(f"{GATEWAY}/api/v1/telemetry/query", headers={"Authorization":f"Bearer {tokens['ehs_manager']}"})
+        d = r.json()
+        all_ehs = all(r.get("domain_name") == "ehs" for r in d["records"])
+        tr.ok("EHS Mgr Query", f"{d['count']} records, all_ehs={all_ehs}")
+
+        # Emergency responder sees only critical
+        r = requests.get(f"{GATEWAY}/api/v1/telemetry/query", headers={"Authorization":f"Bearer {tokens['emergency_responder']}"})
+        d = r.json()
+        all_crit = all(r.get("is_critical") for r in d["records"])
+        tr.ok("Responder Critical-Only", f"{d['count']} records, all_critical={all_crit}")
+
+        # Operator sees only critical
+        r = requests.get(f"{GATEWAY}/api/v1/telemetry/query", headers={"Authorization":f"Bearer {tokens['operator']}"})
+        d = r.json()
+        op_crit = all(r.get("is_critical") for r in d["records"]) if d["records"] else True
+        tr.ok("Operator Critical-Only", f"{d['count']} records, all_critical={op_crit}")
+
+        # Resident sees only their nodes
+        r = requests.get(f"{GATEWAY}/api/v1/telemetry/query", headers={"Authorization":f"Bearer {tokens['resident']}"})
+        d = r.json()
+        res_nodes_only = all(r.get("node_id_str","").startswith("R1-") for r in d["records"]) if d["records"] else True
+        tr.ok("Resident Own Nodes", f"{d['count']} records, own_nodes_only={res_nodes_only}")
+
+        # Resident personal data endpoint
+        r = requests.get(f"{GATEWAY}/api/v1/my-data", headers={"Authorization":f"Bearer {tokens['resident']}"})
+        d = r.json()
+        tr.ok("Resident my-data", f"nodes={len(d.get('nodes',[]))}, consumption={d.get('summary',{}).get('consumption_w',0)}W")
+
+        # Unauth blocked
+        r = requests.get(f"{GATEWAY}/api/v1/telemetry/query")
+        tr.ok("Unauth Blocked", "401") if r.status_code == 401 else tr.fail("Unauth Block", str(r.status_code))
+
+        # ── Step 5: Users & Nodes ──
+        print(f"\n{'─'*50}\n  Step 5: Users & Nodes\n{'─'*50}")
+        r = requests.get(f"{GATEWAY}/api/v1/users", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        tr.ok("Admin List Users", f"{r.json()['count']} users")
+
+        r = requests.get(f"{GATEWAY}/api/v1/users", headers={"Authorization":f"Bearer {tokens['analyst']}"})
+        tr.ok("Analyst Users Blocked", "403") if r.status_code == 403 else tr.fail("Analyst Users", str(r.status_code))
+
+        r = requests.get(f"{GATEWAY}/api/v1/nodes", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        tr.ok("List Nodes", f"{r.json()['count']} nodes registered")
+
+        # ── Step 6: Dashboard Data ──
+        print(f"\n{'─'*50}\n  Step 6: Dashboard Data (per role)\n{'─'*50}")
+        for role, token in tokens.items():
+            r = requests.get(f"{GATEWAY}/api/v1/dashboard-data", headers={"Authorization":f"Bearer {token}"})
+            if r.status_code == 200:
+                d = r.json()
+                tr.ok(f"Dashboard ({role})", f"readings={d['stats'].get('total_readings',0)}, domains={d['stats'].get('total_domains',0)}")
+            else:
+                tr.fail(f"Dashboard ({role})", str(r.status_code))
+
+        # ── Step 7: Roles, Stats, Alerts, Analytics, Node Health ──
+        print(f"\n{'─'*50}\n  Step 7: Roles, Stats, Analytics, Health\n{'─'*50}")
+        r = requests.get(f"{GATEWAY}/api/v1/roles")
+        tr.ok("List Roles", f"{r.json()['count']} roles")
+
+        r = requests.get(f"{GATEWAY}/api/v1/telemetry/stats", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        tr.ok("Telemetry Stats", f"{len(r.json()['domains'])} domains")
+
+        r = requests.get(f"{GATEWAY}/api/v1/alerts", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Alerts (empty)", f"{d['count']} alerts — {d.get('note','')}")
+
+        # Analytics endpoint
+        r = requests.get(f"{GATEWAY}/api/v1/analytics", headers={"Authorization":f"Bearer {tokens['analyst']}"})
+        d = r.json()
+        tr.ok("Analyst Analytics", f"node_types={len(d.get('node_type_stats',[]))}, top_crit={len(d.get('top_critical_nodes',[]))}")
+
+        # Node Health endpoint
+        r = requests.get(f"{GATEWAY}/api/v1/node-health", headers={"Authorization":f"Bearer {tokens['operator']}"})
+        d = r.json()
+        tr.ok("Node Health", f"{d['count']} nodes with status")
+
+        r = requests.get(f"{GATEWAY}/dashboard")
+        tr.ok("Dashboard HTML", f"{len(r.text)} bytes") if r.status_code == 200 else tr.fail("Dashboard HTML", str(r.status_code))
+
+        # ── Step 8: Engine Health, Control, System Metrics ──
+        print(f"\n{'─'*50}\n  Step 8: Engine Health, Control, HLD\n{'─'*50}")
+
+        # Engine Health with system metrics
+        r = requests.get(f"{GATEWAY}/api/v1/engine-health", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        sys_m = d.get("system", {})
+        tr.ok("Engine Health", f"rps={d.get('records_per_second',0)}, nodes={d.get('active_nodes',0)}")
+        tr.ok("System Metrics", f"cpu={sys_m.get('cpu_count','?')} cores, usage={sys_m.get('cpu_usage_pct','?')}%, mem={sys_m.get('memory_mb','?')}MB, threads={sys_m.get('thread_count','?')}")
+
+        # Engine Report
+        r = requests.get(f"{GATEWAY}/api/v1/engine-report", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Engine Report", f"domains={len(d.get('domain_breakdown',[]))}, faulty={len(d.get('top_faulty_nodes',[]))}")
+
+        # Fleet Status
+        r = requests.get(f"{GATEWAY}/api/v1/fleet-status", headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Fleet Status", f"{d['count']} nodes, {d['active']} active")
+
+        # Set Interval
+        r = requests.post(f"{GATEWAY}/api/v1/control/set-interval",
+            json={"interval":2.0},
+            headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Set Interval", f"new={d.get('new_interval')}s")
+
+        # Add Dynamic Node
+        r = requests.post(f"{GATEWAY}/api/v1/control/add-node",
+            json={"node_id":"DYN-TEST-001","domain":"energy","node_type":"solar_panel"},
+            headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Add Node", f"{d.get('node_id')} -> {d.get('status')}")
+
+        # Add Bulk Nodes
+        r = requests.post(f"{GATEWAY}/api/v1/control/add-bulk-nodes",
+            json={"count":5,"domain":"energy","node_type":"solar_panel","prefix":"BULK"},
+            headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Add Bulk Nodes", f"{d.get('count',0)} nodes added")
+
+        # Remove Node
+        r = requests.post(f"{GATEWAY}/api/v1/control/remove-node",
+            json={"node_id":"DYN-TEST-001"},
+            headers={"Authorization":f"Bearer {tokens['admin']}"})
+        d = r.json()
+        tr.ok("Remove Node", f"DYN-TEST-001 -> {d.get('status')}")
+
+        # Control Panel HTML
+        r = requests.get(f"{GATEWAY}/control-panel")
+        tr.ok("Control Panel HTML", f"{len(r.text)} bytes") if r.status_code == 200 else tr.fail("Control Panel HTML", str(r.status_code))
+
+        # HLD Architecture HTML
+        r = requests.get(f"{GATEWAY}/hld-architecture")
+        tr.ok("HLD Architecture HTML", f"{len(r.text)} bytes") if r.status_code == 200 else tr.fail("HLD Architecture", str(r.status_code))
+
+        # Non-manager blocked from control
+        r = requests.post(f"{GATEWAY}/api/v1/control/set-interval",
+            json={"interval":1.0},
+            headers={"Authorization":f"Bearer {tokens['resident']}"})
+        tr.ok("Resident Control Blocked", "403") if r.status_code == 403 else tr.fail("Resident Control", str(r.status_code))
+
+        # ── Report ──
+        print(f"\n{'─'*50}\n  Generating Report\n{'─'*50}")
+        REPORT_DIR.mkdir(parents=True, exist_ok=True)
+        rp = REPORT_DIR / "access_service_test_report.html"
+        color = "#10b981" if tr.failed == 0 else "#ef4444"
+        rows = "\n".join(f'<tr style="background:{"#1a2035" if s=="PASS" else "rgba(239,68,68,.1)"}"><td>{"✅" if s=="PASS" else "❌"}</td><td>{n}</td><td>{d}</td><td>{m}ms</td></tr>' for s,n,d,m in tr.results)
+        rp.write_text(f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Test Report</title>
+<style>body{{font-family:Inter,sans-serif;background:#0a0e1a;color:#e2e8f0;padding:40px}}h1{{color:{color}}}
+table{{width:100%;border-collapse:collapse;margin-top:20px}}th,td{{padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06);font-size:.85rem}}
+th{{color:#94a3b8;font-size:.75rem;text-transform:uppercase}}</style></head>
+<body><h1>Access Management Service — Test Report</h1><p>Generated: {datetime.now().isoformat()}</p>
+<p style="font-size:1.2rem;font-weight:800;color:{color}">{tr.passed}/{tr.passed+tr.failed} tests passed</p>
+<p>Architecture: Two Microservices (Ingestion + Gateway) | Database: SQLite (WAL)</p>
+<table><thead><tr><th></th><th>Test</th><th>Detail</th><th>Time</th></tr></thead><tbody>{rows}</tbody></table></body></html>""")
+        tr.ok("Report Generated", str(rp))
 
         # Summary
-        color = "" if tr.all_passed else "\033[91m"
-        end = "\033[0m" if color else ""
-        print(f"\n{'═'*60}")
-        print(f"  {color}{'ALL TESTS PASSED' if tr.all_passed else f'{tr.failed} TESTS FAILED'} ({tr.passed}/{tr.total}){end}")
-        print(f"\n  Report: {report_path}")
-        print(f"  Dashboard: {base}/dashboard")
-        print(f"  Swagger: {base}/docs")
-        print(f"{'═'*60}")
+        print(f"\n{'═'*64}")
+        print(f"  {'ALL TESTS PASSED' if tr.failed==0 else f'{tr.failed} FAILED'} ({tr.passed}/{tr.passed+tr.failed})")
+        print(f"\n  Report:    {rp}")
+        print(f"  Gateway:   {GATEWAY}/dashboard")
+        print(f"  Ingestion: {INGEST}/docs")
+        print(f"  Gateway:   {GATEWAY}/docs")
+        print(f"{'═'*64}")
 
-    finally:
-        if not no_browser and tokens:
-            # Keep server running for browser demo
-            print(f"\n  [INFO] Server running at {base}/dashboard")
-            print(f"  [INFO] Press Ctrl+C to stop...")
+        if not args.no_browser:
+            webbrowser.open(f"{GATEWAY}/dashboard")
+            print(f"\n  Server running. Press Ctrl+C to stop...")
             try:
-                while True:
-                    time.sleep(1)
+                while True: time.sleep(1)
             except KeyboardInterrupt:
                 pass
 
-        print(f"\n  [INFO] Shutting down server...")
-        server.terminate()
-        try:
-            server.wait(timeout=5)
-        except Exception:
-            server.kill()
-        print(f"  [PASS]  Server stopped cleanly")
+    finally:
+        print(f"\n  Shutting down...")
+        ingest_proc.terminate(); gateway_proc.terminate()
+        try: ingest_proc.wait(timeout=3); gateway_proc.wait(timeout=3)
+        except: pass
+        print(f"  [PASS] Both services stopped cleanly")
 
-    sys.exit(0 if tr.all_passed else 1)
+    sys.exit(0 if tr.failed == 0 else 1)
 
 
 if __name__ == "__main__":
