@@ -1,0 +1,74 @@
+{
+  "admin": {
+    "username": "admin",
+    "password_hash": "b457e3dfd7359fdaf77e15a2265c24130c022b72f2ac5866492b4994ee7f81d1",
+    "role": "admin",
+    "full_name": "System Admin",
+    "email": "admin@smartcity.edu",
+    "created_at": "2026-04-23T13:13:41.210252",
+    "is_active": true
+  },
+  "manager1": {
+    "username": "manager1",
+    "password_hash": "48bb7e0c3c560bb27837cd900fb9954a8b49e77fa291cad9d3afe536cf6ec3a5",
+    "role": "campus_manager",
+    "full_name": "Dr. Priya Sharma",
+    "email": "priya@smartcity.edu",
+    "created_at": "2026-04-23T13:13:41.210532",
+    "is_active": true
+  },
+  "analyst1": {
+    "username": "analyst1",
+    "password_hash": "f3da8f9fad90a44909ad1fc9eed63290458aec851a54c84367cd2e2ce0055024",
+    "role": "analyst",
+    "full_name": "Vikram Reddy",
+    "email": "vikram@smartcity.edu",
+    "created_at": "2026-04-23T13:13:41.210774",
+    "is_active": true
+  },
+  "maint1": {
+    "username": "maint1",
+    "password_hash": "6007ef0ec4c7ac60b69798a6eea70f8fced20e6632019594bb80b46b75e78a8e",
+    "role": "maintenance",
+    "full_name": "Raju Kumar",
+    "email": "raju@smartcity.edu",
+    "created_at": "2026-04-23T13:13:41.210948",
+    "is_active": true
+  },
+  "researcher1": {
+    "username": "researcher1",
+    "password_hash": "b9bd2a6cf6913a9ec80ab6934f6f8a88490c096c357a9f227cfcaaf303affb44",
+    "role": "researcher",
+    "full_name": "Dr. Ananya Iyer",
+    "email": "ananya@smartcity.edu",
+    "created_at": "2026-04-23T13:13:41.211120",
+    "is_active": true
+  },
+  "resident1": {
+    "username": "resident1",
+    "password_hash": "fda7c177755624e4e4ad1b2dba41a7a8b31ba68a33d0bb0eccc590da57dd7af0",
+    "role": "resident",
+    "full_name": "Suresh Patel",
+    "email": "suresh@smartcity.edu",
+    "created_at": "2026-04-23T13:13:41.211304",
+    "is_active": true
+  },
+  "responder1": {
+    "username": "responder1",
+    "password_hash": "ebc9905ca879b745624c6f491181f9a39d116dcbe80804accfc082b9c32d6154",
+    "role": "emergency_responder",
+    "full_name": "Inspector Reddy",
+    "email": "responder@smartcity.edu",
+    "created_at": "2026-04-23T13:13:41.211481",
+    "is_active": true
+  },
+  "operator1": {
+    "username": "operator1",
+    "password_hash": "01abcab073f01964ef6ea8a0fd8356928e8e8fef00a33f256c14a12893d93c74",
+    "role": "operator",
+    "full_name": "Kiran Tech",
+    "email": "kiran@smartcity.edu",
+    "created_at": "2026-04-23T13:13:41.211678",
+    "is_active": true
+  }
+}

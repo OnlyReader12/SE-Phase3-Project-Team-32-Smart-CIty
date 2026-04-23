@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart City Gateway — Access Management Dashboard</title>
+    <meta name="description" content="Role-based access management dashboard for the Smart City Living Lab.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #06090f;
+            --bg2: #0d1422;
+            --bg3: #131c2e;
+            --card: linear-gradient(145deg, rgba(19,28,46,0.92), rgba(13,20,34,0.96));
+            --border: rgba(255,255,255,0.06);
+            --glow: rgba(99,102,241,0.2);
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --sub: #94a3b8;
+            --accent: #6366f1;
+            --accent2: #818cf8;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --orange: #f97316;
+            --cyan: #22d3ee;
+            --pink: #ec4899;
+            --radius: 16px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        body::before {
+            content:'';
+            position:fixed; inset:0; z-index:0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(99,102,241,0.08), transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(34,211,238,0.05), transparent 50%);
+        }
+        .app { position:relative; z-index:1; max-width:1440px; margin:0 auto; padding:24px; }
+
+        /* ── LOGIN ── */
+        .login-container {
+            max-width:420px; margin:80px auto; text-align:center;
+        }
+        .login-card {
+            background: var(--card); border:1px solid var(--border);
+            border-radius: var(--radius); padding:40px 32px; box-shadow: var(--shadow);
+        }
+        .login-icon { font-size:3rem; margin-bottom:16px; }
+        .login-card h1 { font-size:1.4rem; font-weight:800; margin-bottom:8px; }
+        .login-card p { color:var(--muted); font-size:0.85rem; margin-bottom:28px; }
+        .form-group { margin-bottom:16px; text-align:left; }
+        .form-group label { display:block; font-size:0.75rem; color:var(--sub); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+        .form-group input {
+            width:100%; padding:12px 16px; border-radius:10px;
+            border:1px solid var(--border); background:rgba(255,255,255,0.04);
+            color:var(--text); font-size:0.95rem; font-family:inherit;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus { outline:none; border-color:var(--accent); }
+        .login-btn {
+            width:100%; padding:14px; border:none; border-radius:10px;
+            background:linear-gradient(135deg,#6366f1,#818cf8); color:#fff;
+            font-size:1rem; font-weight:700; cursor:pointer; margin-top:8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .login-btn:hover { transform:translateY(-1px); box-shadow:0 8px 25px rgba(99,102,241,0.3); }
+        .login-btn:disabled { opacity:0.5; cursor:wait; }
+        .login-error { color:var(--red); font-size:0.82rem; margin-top:12px; min-height:20px; }
+        .login-hint { margin-top:20px; font-size:0.72rem; color:var(--muted); }
+        .login-hint code { background:rgba(99,102,241,0.1); color:var(--accent2); padding:2px 6px; border-radius:4px; }
+
+        /* ── HEADER ── */
+        .header {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:16px 24px; background:var(--card); border:1px solid var(--border);
+            border-radius:var(--radius); margin-bottom:20px; box-shadow:var(--shadow);
+        }
+        .header-left h1 { font-size:1.3rem; font-weight:800; }
+        .header-left p { color:var(--muted); font-size:0.78rem; margin-top:2px; }
+        .header-right { display:flex; align-items:center; gap:14px; }
+        .user-badge {
+            display:flex; align-items:center; gap:8px; padding:6px 14px;
+            background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2);
+            border-radius:100px; font-size:0.78rem; font-weight:600; color:var(--accent2);
+        }
+        .logout-btn {
+            padding:6px 14px; border-radius:100px; border:1px solid var(--border);
+            background:rgba(239,68,68,0.08); color:var(--red); font-size:0.75rem;
+            font-weight:700; cursor:pointer; transition: background 0.2s;
+        }
+        .logout-btn:hover { background:rgba(239,68,68,0.15); }
+
+        /* ── STATS GRID ── */
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; margin-bottom:20px; }
+        .stat-card {
+            background:var(--card); border:1px solid var(--border); border-radius:12px;
+            padding:18px; box-shadow:var(--shadow); transition: transform 0.2s, border-color 0.2s;
+        }
+        .stat-card:hover { transform:translateY(-2px); border-color:var(--glow); }
+        .stat-label { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; }
+        .stat-value { font-size:1.6rem; font-weight:800; margin-top:6px; letter-spacing:-1px; }
+        .stat-detail { font-size:0.68rem; color:var(--muted); margin-top:4px; }
+
+        /* ── SECTIONS ── */
+        .section-title { font-size:1rem; font-weight:700; margin:20px 0 12px; display:flex; align-items:center; gap:8px; }
+        .section-title .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+        .panel {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:20px; margin-bottom:16px; box-shadow:var(--shadow);
+        }
+
+        /* ── TELEMETRY TABLE ── */
+        .tbl { width:100%; border-collapse:collapse; font-size:0.78rem; }
+        .tbl th { text-align:left; padding:10px 12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:0.68rem; border-bottom:1px solid var(--border); }
+        .tbl td { padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.03); }
+        .tbl tr:hover td { background:rgba(255,255,255,0.02); }
+        .badge { padding:3px 8px; border-radius:6px; font-size:0.65rem; font-weight:700; text-transform:uppercase; }
+        .badge-energy { background:rgba(249,115,22,0.15); color:var(--orange); }
+        .badge-ehs { background:rgba(16,185,129,0.15); color:var(--green); }
+        .badge-cam { background:rgba(236,72,153,0.15); color:var(--pink); }
+        .badge-crit { background:rgba(239,68,68,0.15); color:var(--red); }
+        .badge-safe { background:rgba(16,185,129,0.15); color:var(--green); }
+
+        /* ── ALERTS LIST ── */
+        .alert-item {
+            padding:12px 16px; border:1px solid var(--border); border-radius:10px;
+            margin-bottom:8px; display:flex; gap:12px; align-items:flex-start;
+            background:rgba(255,255,255,0.02);
+        }
+        .alert-sev { font-size:0.62rem; font-weight:800; padding:3px 8px; border-radius:6px; white-space:nowrap; }
+        .alert-sev.CRITICAL { background:rgba(239,68,68,0.2); color:var(--red); }
+        .alert-sev.WARNING { background:rgba(245,158,11,0.2); color:var(--yellow); }
+        .alert-body h4 { font-size:0.82rem; font-weight:600; }
+        .alert-body p { font-size:0.72rem; color:var(--sub); margin-top:2px; }
+
+        /* ── USERS TABLE ── */
+        .role-tag { padding:3px 8px; border-radius:6px; font-size:0.65rem; font-weight:700; background:rgba(99,102,241,0.12); color:var(--accent2); }
+
+        /* ── DOMAIN CARDS ── */
+        .domain-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
+        .domain-card {
+            background:rgba(255,255,255,0.03); border:1px solid var(--border);
+            border-radius:12px; padding:18px;
+        }
+        .domain-card h4 { font-size:0.9rem; font-weight:700; margin-bottom:8px; text-transform:capitalize; }
+        .domain-meta { font-size:0.75rem; color:var(--sub); line-height:1.6; }
+
+        /* ── PERMISSIONS VIEW ── */
+        .perm-list { display:flex; flex-wrap:wrap; gap:6px; }
+        .perm-chip { padding:4px 10px; border-radius:100px; font-size:0.68rem; font-weight:600; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.15); color:var(--accent2); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width:768px) {
+            .stats-grid { grid-template-columns:1fr 1fr; }
+            .domain-grid { grid-template-columns:1fr; }
+            .header { flex-direction:column; gap:12px; text-align:center; }
+        }
+        .hidden { display:none !important; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- ═══ LOGIN VIEW ═══ -->
+        <div id="loginView" class="login-container">
+            <div class="login-card">
+                <div class="login-icon">🏛️</div>
+                <h1>Smart City Gateway</h1>
+                <p>Access Management & Data Dashboard — Team 32</p>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUser" placeholder="e.g. admin" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+                </div>
+                <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+                <div class="login-error" id="loginError"></div>
+                <div class="login-hint">
+                    Default accounts: <code>admin / admin123</code> · <code>analyst1 / analyst123</code> ·
+                    <code>maint1 / maint123</code> · <code>researcher1 / research123</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ DASHBOARD VIEW ═══ -->
+        <div id="dashView" class="hidden">
+            <header class="header">
+                <div class="header-left">
+                    <h1>🏛️ Smart City Gateway Dashboard</h1>
+                    <p>Access Management & Data Gateway — Team 32</p>
+                </div>
+                <div class="header-right">
+                    <span class="user-badge" id="userBadge">👤 loading...</span>
+                    <button class="logout-btn" onclick="doLogout()">Logout</button>
+                </div>
+            </header>
+
+            <div id="dashContent">Loading...</div>
+        </div>
+    </div>
+
+    <script>
+        const API = '';
+        let TOKEN = localStorage.getItem('sc_token');
+        let USER = null;
+
+        // ── Auth ──
+        async function doLogin() {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('loginError');
+            err.textContent = '';
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+            try {
+                const res = await fetch(`${API}/auth/login`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({username:user, password:pass})
+                });
+                if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Login failed'); }
+                const data = await res.json();
+                TOKEN = data.access_token;
+                localStorage.setItem('sc_token', TOKEN);
+                showDashboard();
+            } catch(e) {
+                err.textContent = e.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            }
+        }
+        document.addEventListener('keydown', e => { if(e.key==='Enter' && !document.getElementById('loginView').classList.contains('hidden')) doLogin(); });
+
+        function doLogout() {
+            TOKEN = null;
+            USER = null;
+            localStorage.removeItem('sc_token');
+            document.getElementById('loginView').classList.remove('hidden');
+            document.getElementById('dashView').classList.add('hidden');
+        }
+
+        async function authFetch(url) {
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${TOKEN}` }});
+            if (res.status === 401) { doLogout(); throw new Error('Session expired'); }
+            return res;
+        }
+
+        // ── Dashboard ──
+        async function showDashboard() {
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('dashView').classList.remove('hidden');
+
+            try {
+                const [meRes, dashRes] = await Promise.all([
+                    authFetch(`${API}/api/v1/me`),
+                    authFetch(`${API}/api/v1/dashboard-data`),
+                ]);
+                USER = await meRes.json();
+                const dash = await dashRes.json();
+                document.getElementById('userBadge').innerHTML = `${USER.icon || '👤'} ${USER.username} <span style="opacity:0.6;margin-left:4px">(${USER.role_label})</span>`;
+                renderDashboard(dash);
+            } catch(e) {
+                document.getElementById('dashContent').innerHTML = `<div class="panel"><p style="color:var(--red)">Error: ${e.message}</p></div>`;
+            }
+        }
+
+        function renderDashboard(d) {
+            const s = d.stats || {};
+            const role = d.role;
+            const domainColors = { energy:'badge-energy', ehs:'badge-ehs', cam:'badge-cam' };
+            let html = '';
+
+            // ── Role Info Bar ──
+            html += `<div class="panel" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <span style="font-size:1.8rem;margin-right:8px">${d.icon}</span>
+                    <strong>${d.role_label}</strong>
+                    <span style="color:var(--muted);margin-left:8px;font-size:0.82rem">Role: ${d.role}</span>
+                </div>
+                <div class="perm-list">${d.permissions.map(p=>`<span class="perm-chip">${p}</span>`).join('')}</div>
+            </div>`;
+
+            // ── Stats Cards ──
+            html += `<div class="stats-grid">
+                <div class="stat-card"><div class="stat-label">Total Records</div><div class="stat-value" style="color:var(--accent2)">${s.total_records||0}</div><div class="stat-detail">Ingested telemetry</div></div>
+                <div class="stat-card"><div class="stat-label">Active Nodes</div><div class="stat-value" style="color:var(--cyan)">${s.total_nodes||0}</div><div class="stat-detail">Across ${s.total_domains||0} domains</div></div>
+                <div class="stat-card"><div class="stat-label">Alerts</div><div class="stat-value" style="color:${s.critical_alerts>0?'var(--red)':'var(--green)'}">${s.total_alerts||0}</div><div class="stat-detail">${s.critical_alerts||0} critical</div></div>
+                ${s.total_users!==undefined ? `<div class="stat-card"><div class="stat-label">Users</div><div class="stat-value" style="color:var(--accent2)">${s.total_users}</div><div class="stat-detail">Registered accounts</div></div>` : ''}
+            </div>`;
+
+            // ── Domain Breakdown ──
+            const domains = s.domain_breakdown || {};
+            if (Object.keys(domains).length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Domain Overview</h2>`;
+                html += `<div class="domain-grid">`;
+                for (const [dom, ds] of Object.entries(domains)) {
+                    const color = domainColors[dom] || 'badge-safe';
+                    html += `<div class="domain-card">
+                        <h4><span class="${color} badge">${dom}</span></h4>
+                        <div class="domain-meta">
+                            Records: <strong>${ds.total_records}</strong><br>
+                            Unique Nodes: <strong>${ds.unique_nodes}</strong><br>
+                            Node Types: ${ds.node_types.join(', ') || 'none'}<br>
+                            Latest: ${ds.latest_timestamp ? new Date(ds.latest_timestamp).toLocaleTimeString() : '--'}
+                        </div>
+                    </div>`;
+                }
+                html += `</div>`;
+            }
+
+            // ── Alerts ──
+            if (d.alerts && d.alerts.length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Recent Alerts (${d.alerts.length})</h2><div class="panel">`;
+                for (const a of d.alerts.slice(0, 10)) {
+                    html += `<div class="alert-item">
+                        <span class="alert-sev ${a.severity||'WARNING'}">${a.severity||'?'}</span>
+                        <div class="alert-body">
+                            <h4>${a.message||'Alert'}</h4>
+                            <p>${a.node_id||''} · ${a.domain||''} · ${a.created_at ? new Date(a.created_at).toLocaleTimeString() : ''}</p>
+                        </div>
+                    </div>`;
+                }
+                html += `</div>`;
+            }
+
+            // ── Recent Telemetry ──
+            if (d.recent_telemetry && d.recent_telemetry.length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Recent Telemetry (${d.recent_telemetry.length})</h2>`;
+                html += `<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr>
+                    <th>Time</th><th>Node ID</th><th>Domain</th><th>Type</th><th>Key Values</th>
+                </tr></thead><tbody>`;
+                for (const r of d.recent_telemetry.slice(0, 20)) {
+                    const domCls = domainColors[r.domain] || '';
+                    const data = r.data || {};
+                    const preview = Object.entries(data).slice(0,3).map(([k,v])=>`${k}=${typeof v==='number'?Math.round(v*10)/10:v}`).join(', ');
+                    const ts = r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : '--';
+                    html += `<tr>
+                        <td style="color:var(--muted)">${ts}</td>
+                        <td><code style="font-size:0.72rem">${r.node_id||'?'}</code></td>
+                        <td><span class="badge ${domCls}">${r.domain||'?'}</span></td>
+                        <td style="font-size:0.72rem">${r.node_type||'?'}</td>
+                        <td style="font-size:0.72rem;color:var(--sub)">${preview}</td>
+                    </tr>`;
+                }
+                html += `</tbody></table></div>`;
+            }
+
+            // ── Users list (admin only) ──
+            if (USER && USER.can_manage_users) {
+                html += `<h2 class="section-title"><span class="dot"></span>User Accounts</h2>`;
+                loadUsers().then(users => {
+                    if (!users) return;
+                    let tbl = `<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr>
+                        <th>Username</th><th>Role</th><th>Name</th><th>Status</th>
+                    </tr></thead><tbody>`;
+                    for (const u of users) {
+                        tbl += `<tr>
+                            <td><code>${u.username}</code></td>
+                            <td><span class="role-tag">${u.role}</span></td>
+                            <td>${u.full_name||'—'}</td>
+                            <td>${u.is_active ? '<span style="color:var(--green)">Active</span>' : '<span style="color:var(--red)">Disabled</span>'}</td>
+                        </tr>`;
+                    }
+                    tbl += `</tbody></table></div>`;
+                    document.getElementById('usersSection').innerHTML = tbl;
+                });
+                html += `<div id="usersSection">Loading users...</div>`;
+            }
+
+            // ── Footer ──
+            html += `<div style="text-align:center;padding:20px;font-size:0.7rem;color:var(--muted);margin-top:16px;border-top:1px solid var(--border)">
+                Team 32 — Smart City Living Lab |
+                Patterns: Repository · Strategy · Factory · JWT Auth |
+                <a href="/docs" style="color:var(--accent2);text-decoration:none">API Docs</a> ·
+                <a href="/health" style="color:var(--accent2);text-decoration:none">Health</a>
+            </div>`;
+
+            document.getElementById('dashContent').innerHTML = html;
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await authFetch(`${API}/api/v1/users`);
+                const data = await res.json();
+                return data.users || [];
+            } catch(e) { return null; }
+        }
+
+        // ── Auto-login if token exists ──
+        if (TOKEN) { showDashboard(); }
+
+        // ── Auto-refresh every 8 seconds if logged in ──
+        setInterval(() => { if(TOKEN && !document.getElementById('dashView').classList.contains('hidden')) showDashboard(); }, 8000);
+    </script>
+</body>
+</html>

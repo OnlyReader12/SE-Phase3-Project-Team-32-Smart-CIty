@@ -1,0 +1,3 @@
+{"node_id": "EHS-AQI-001", "domain": "ehs", "node_type": "air_quality", "timestamp": "2026-04-23T13:13:41.954738", "data": {"aqi": 320, "pm25": 112.0, "temperature_c": 35.2, "is_critical": true}, "id": "c8d50e12-33b", "ingested_at": "2026-04-23T13:13:41.955804"}
+{"node_id": "EHS-WTR-001", "domain": "ehs", "node_type": "water_quality", "timestamp": "2026-04-23T13:13:41.956526", "data": {"water_ph": 4.2, "turbidity_ntu": 150, "is_critical": true}, "id": "239a4453-5c4", "ingested_at": "2026-04-23T13:13:41.957617"}
+{"node_id": "EHS-NOS-001", "domain": "ehs", "node_type": "noise_monitor", "timestamp": "2026-04-23T13:13:41.958337", "data": {"noise_db": 45.0, "peak_db": 52.0, "is_critical": false}, "id": "b22d5b53-1e2", "ingested_at": "2026-04-23T13:13:41.959363"}

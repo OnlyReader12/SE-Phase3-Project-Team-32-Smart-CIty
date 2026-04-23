@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Access Management Service — Test Report</title>
+<style>body{font-family:Inter,sans-serif;background:#0a0e1a;color:#e2e8f0;padding:40px;}
+h1{color:#10b981;}table{width:100%;border-collapse:collapse;margin-top:20px;}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.85rem;}
+th{color:#94a3b8;font-size:0.75rem;text-transform:uppercase;}</style></head>
+<body><h1>Access Management Service — Test Report</h1>
+<p>Generated: 2026-04-23T13:13:42.003600</p>
+<p style="font-size:1.2rem;font-weight:800;color:#10b981">33/33 tests passed</p>
+<table><thead><tr><th></th><th>Test</th><th>Detail</th><th>Time</th></tr></thead><tbody>
+<tr style="background:#1a2035"><td>✅</td><td>Health Check</td><td>Status=healthy, Backend=FileStorageBackend, Users=8</td><td>5ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Admin Login</td><td>Role=admin, Token=eyJhbGciOiJIUzI1NiIs...</td><td>4ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Invalid Login Rejected</td><td>Expected 401 received</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Analyst Login</td><td>User=analyst1</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Maintenance Login</td><td>User=maint1</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Researcher Login</td><td>User=researcher1</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Emergency_Responder Login</td><td>User=responder1</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Resident Login</td><td>User=resident1</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Admin Profile</td><td>Role=admin, Perms=11</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-SOL-001</td><td>ID=93f4c3fd-0a3 domain=energy</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-BAT-001</td><td>ID=3ec89d01-305 domain=energy</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-GRD-001</td><td>ID=0fd92a77-4e3 domain=energy</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest NRG-AC-001</td><td>ID=7f0ecf74-28a domain=energy</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-AQI-001</td><td>ID=c8d50e12-33b domain=ehs</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-WTR-001</td><td>ID=239a4453-5c4 domain=ehs</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Ingest EHS-NOS-001</td><td>ID=b22d5b53-1e2 domain=ehs</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Admin Query</td><td>17 records (all domains visible)</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Analyst Query</td><td>17 records, domains={'energy', 'ehs'}</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Responder Query</td><td>5 records, all_critical=True</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Resident Blocked</td><td>Expected 403 — no telemetry.read permission</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Unauth Blocked</td><td>Expected 401 for missing token</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Admin List Users</td><td>8 users</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Analyst Users Blocked</td><td>Expected 403 — no users.read permission</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (admin)</td><td>Records=17, Alerts=5, Domains=2</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (analyst)</td><td>Records=17, Alerts=5, Domains=2</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (maintenance)</td><td>Records=17, Alerts=5, Domains=2</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (researcher)</td><td>Records=17, Alerts=5, Domains=2</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (emergency_responder)</td><td>Records=17, Alerts=5, Domains=2</td><td>1ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard (resident)</td><td>Records=17, Alerts=5, Domains=2</td><td>2ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>List Roles</td><td>8 roles defined</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Dashboard HTML</td><td>HTML page served (21428 bytes)</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Telemetry Stats</td><td>Domains: ['energy', 'ehs']</td><td>0ms</td></tr>
+<tr style="background:#1a2035"><td>✅</td><td>Alerts Query</td><td>5 alerts</td><td>0ms</td></tr>
+</tbody></table></body></html>
