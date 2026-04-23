@@ -1,0 +1,80 @@
+# ============================================================
+# Energy Management Engine — Runtime Configuration
+# ============================================================
+# Strategy Pattern: Change 'ml_strategy' here to swap the
+# entire forecasting backend WITHOUT touching any source code.
+#
+# Includes thresholds for 7 Energy metric types across 7 node
+# types (Solar, Meter, Battery, Grid, Occupancy, Water, AC).
+# ============================================================
+
+energy_engine:
+  # --- ML Strategy Selection ---
+  # Options: "scikit" | "tensorflow"
+  ml_strategy: "scikit"
+  model_path: "./models/energy_forecast.joblib"
+  tensorflow_model_path: "./models/energy_forecast_tf"
+
+  # --- Safety Thresholds (7 Metric Types) ---
+  thresholds:
+    # Solar Panel Efficiency
+    solar_power:
+      warning: 200       # Low output below 200W (daytime)
+      critical: 50       # Panel failure below 50W
+
+    # Power Factor (IEEE/utility standards)
+    power_factor:
+      warning: 0.90      # Inefficient, penalties apply
+      critical: 0.80     # Severely inefficient
+
+    # Battery State of Charge
+    battery_soc:
+      warning: 40        # Low battery (%)
+      critical: 20       # Critically low, blackout risk
+
+    # Grid / Transformer Load
+    grid_load:
+      warning: 70        # Elevated load (%)
+      critical: 90       # Overload, trip/fault imminent
+
+    # Occupancy / Overcrowding
+    occupancy:
+      warning: 50        # High density (persons)
+      critical: 100      # Fire code risk
+
+    # Water Flow / Leak Detection
+    water_leak:
+      warning: 50        # High flow rate (LPM)
+      critical: 100      # Possible pipe burst
+
+    # AC Unit Power Consumption
+    ac_overload:
+      warning: 2000      # High load (Watts)
+      critical: 3500     # Circuit trip risk
+
+  # --- Middleware Configuration ---
+  middleware:
+    base_url: "http://localhost:8001"
+
+  # --- RabbitMQ (AMQP) Configuration ---
+  rabbitmq:
+    host: "localhost"
+    port: 5672
+    username: "guest"
+    password: "guest"
+    exchange: "smartcity"
+    exchange_type: "topic"
+    # Observer Pattern: only subscribe to power/energy topics.
+    # We never receive AQI or camera data here.
+    subscribe_queue: "energy_telemetry_queue"
+    subscribe_binding_key: "telemetry.power.#"
+    publish_topic: "alerts.critical"
+
+  # --- InfluxDB Configuration ---
+  influxdb:
+    url: "http://localhost:8086"
+    token: "dev-token-replace-in-production"
+    org: "smartcity"
+    bucket: "energy_telemetry"
+    # 30-day retention is enforced at the InfluxDB side (ADR-007).
+    # We simply write; the TSDB manages expiry automatically.

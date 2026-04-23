@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Engine — Test Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e1a; --card: #1a2035; --border: rgba(255,255,255,0.08);
+            --text: #e2e8f0; --muted: #64748b; --green: #10b981;
+            --red: #ef4444; --yellow: #f59e0b; --blue: #3b82f6; --cyan: #22d3ee;
+            --orange: #f97316;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); padding:32px; }
+        .container { max-width:1100px; margin:0 auto; }
+        h1 { font-size:2rem; font-weight:800; margin-bottom:8px; }
+        h1 span { color:var(--orange); }
+        .subtitle { color:var(--muted); font-size:0.95rem; margin-bottom:24px; }
+        .summary { display:flex; gap:16px; margin-bottom:32px; flex-wrap:wrap; }
+        .stat { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 24px; flex:1; min-width:160px; }
+        .stat-label { color:var(--muted); font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; }
+        .stat-value { font-size:2rem; font-weight:700; margin-top:4px; }
+        .stat-value.green { color:var(--green); }
+        .stat-value.red { color:var(--red); }
+        .stat-value.blue { color:var(--cyan); }
+        table { width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; margin-top:16px; }
+        th { background:rgba(255,255,255,0.05); color:var(--muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; padding:12px 16px; text-align:left; }
+        td { padding:12px 16px; border-top:1px solid var(--border); font-size:0.9rem; }
+        .pass { color:var(--green); font-weight:600; }
+        .fail { color:var(--red); font-weight:600; }
+        .badge { display:inline-block; padding:2px 10px; border-radius:99px; font-size:0.75rem; font-weight:600; }
+        .badge-pass { background:rgba(16,185,129,0.15); color:var(--green); }
+        .badge-fail { background:rgba(239,68,68,0.15); color:var(--red); }
+        .footer { text-align:center; color:var(--muted); font-size:0.8rem; margin-top:32px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>⚡ Energy Engine — <span>Test Report</span></h1>
+    <p class="subtitle">Generated: 2026-04-23 12:06:59 | Energy Management Engine v2.0 | Team Member 3: Raghuram</p>
+
+    <div class="summary">
+        <div class="stat"><div class="stat-label">Total Tests</div><div class="stat-value blue">24</div></div>
+        <div class="stat"><div class="stat-label">Passed</div><div class="stat-value green">23</div></div>
+        <div class="stat"><div class="stat-label">Failed</div><div class="stat-value red">1</div></div>
+        <div class="stat"><div class="stat-label">Pass Rate</div><div class="stat-value green">96%</div></div>
+    </div>
+
+    <table>
+        <thead><tr><th>Test</th><th>Endpoint</th><th>Method</th><th>Status</th><th>HTTP</th><th>Time</th></tr></thead>
+        <tbody>
+            <tr>
+                <td>Evaluate NRG-SOL-001 (solar_panel)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>19ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-SOL-002 (solar_panel)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>18ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-SOL-003 (solar_panel)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>32ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-MTR-001 (smart_meter)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>15ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-MTR-002 (smart_meter)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>16ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-BAT-001 (battery_storage)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>6ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-BAT-002 (battery_storage)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>23ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-GRD-001 (grid_transformer)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>17ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-GRD-002 (grid_transformer)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>21ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-OCC-001 (occupancy_sensor)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>27ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-H2O-001 (water_meter)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>19ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-H2O-002 (water_meter)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>15ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-AC-001 (ac_unit)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>25ms</td>
+            </tr>
+            <tr>
+                <td>Evaluate NRG-AC-002 (ac_unit)</td>
+                <td><code>/evaluate</code></td>
+                <td>POST</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>15ms</td>
+            </tr>
+            <tr>
+                <td>Health Check</td>
+                <td><code>/health</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>28ms</td>
+            </tr>
+            <tr>
+                <td>Energy Thresholds</td>
+                <td><code>/thresholds</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>16ms</td>
+            </tr>
+            <tr>
+                <td>Energy Suggestions</td>
+                <td><code>/suggestions</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>17ms</td>
+            </tr>
+            <tr>
+                <td>Predict NRG-SOL-001</td>
+                <td><code>/predict/NRG-SOL-001</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>17ms</td>
+            </tr>
+            <tr>
+                <td>Predict unfound node</td>
+                <td><code>/predict/NONEXISTENT-999</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>404</td>
+                <td>16ms</td>
+            </tr>
+            <tr>
+                <td>Time-Series (Solar)</td>
+                <td><code>/visualize/timeseries?metric=solar_power_w</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>16ms</td>
+            </tr>
+            <tr>
+                <td>Time-Series (Grid Load)</td>
+                <td><code>/visualize/timeseries?metric=grid_load_pct</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>18ms</td>
+            </tr>
+            <tr>
+                <td>Campus Heatmap</td>
+                <td><code>/visualize/heatmap</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>17ms</td>
+            </tr>
+            <tr>
+                <td>Dashboard Data</td>
+                <td><code>/dashboard-data</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>200</td>
+                <td>18ms</td>
+            </tr>
+            <tr>
+                <td>Dashboard HTML<br><small style="color:var(--red)"><h1>Dashboard not found</h1><p>Ensure static/dashboard.html exists.</p></small></td>
+                <td><code>/dashboard</code></td>
+                <td>GET</td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td>404</td>
+                <td>13ms</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class="footer">
+        Design Patterns: Strategy (ML) · Observer (AMQP) · Factory Method (Evaluators) · Command (Suggestions)
+        <br>Smart City Living Lab | SE Phase 3 | Team 32
+    </p>
+</div>
+</body></html>
