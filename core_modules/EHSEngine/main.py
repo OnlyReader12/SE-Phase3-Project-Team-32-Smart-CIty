@@ -1,5 +1,5 @@
 """
-main.py — EHS Domain Engine: FastAPI Application Entry Point.
+main.py — EHS Domain Engine: FastAPI Application Entry Point (Expanded).
 
 Team Member 2 (Saicharan) — EHS (Environmental Health & Safety) Engine
 Port: 8002
@@ -9,7 +9,20 @@ This service is an entirely independent container. On startup it:
   2. Selects the correct ML Strategy from config (Scikit or TensorFlow)
   3. Wires all dependencies: InfluxWriter → AlertPublisher → EHSEngineEvaluator
   4. Starts the AMQP consumer in a background thread (subscribes to telemetry.enviro.#)
-  5. Exposes FastAPI routes for health checks and manual testing
+  5. Exposes FastAPI routes for health checks, manual testing, prediction,
+     visualization, suggestions, and a real-time dashboard
+
+Expanded API Surface:
+  GET  /                    → Service info
+  GET  /health              → Health check
+  GET  /thresholds          → Current safety thresholds
+  POST /evaluate            → Manual evaluation testing
+  GET  /predict/{node_id}   → ML forecast for a specific node
+  GET  /visualize/timeseries → Time-series chart data
+  GET  /visualize/heatmap   → Campus-wide metric heatmap
+  GET  /suggestions         → Actionable EHS suggestions
+  GET  /dashboard-data      → Full dashboard JSON summary
+  GET  /dashboard           → Interactive HTML dashboard
 
 What this engine DOES NOT do:
   ❌ Talk to Twilio / SendGrid (Member 4 handles that)
@@ -22,7 +35,11 @@ import sys
 import yaml
 import uvicorn
 import traceback
-from fastapi import FastAPI, HTTPException
+import requests
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
 
 from consumer.amqp_consumer import AMQPConsumer
 from evaluator.engine_evaluator import EHSEngineEvaluator
@@ -32,6 +49,7 @@ from models.schemas import EHSTelemetry, EvaluatedReading
 
 # Resolve the directory of THIS script (so config.yaml is always found)
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SERVER_PORT = int(os.getenv("EHS_ENGINE_PORT", "8002"))
 
 
 # ─────────────────────────────────────────────
@@ -43,6 +61,11 @@ def load_config() -> dict:
     print(f"[Config] Loading from: {config_path}")
     with open(config_path, "r") as f:
         return yaml.safe_load(f)["ehs_engine"]
+
+
+def get_middleware_base_url() -> str:
+    config = load_config()
+    return config.get("middleware", {}).get("base_url", "http://localhost:8001")
 
 
 # ─────────────────────────────────────────────
@@ -74,12 +97,14 @@ app = FastAPI(
     title="EHS Domain Engine",
     description=(
         "Environmental Health & Safety microservice for the Smart City Living Lab.\n\n"
-        "**Team Member 2 (Saicharan)** — Subscribes to `telemetry.enviro.*` on RabbitMQ, "
-        "evaluates AQI and water pH thresholds, runs ML forecasts via the Strategy Pattern, "
-        "persists to InfluxDB, and publishes CRITICAL alerts back to RabbitMQ.\n\n"
+        "**Team Member 2 (Saicharan)** — Monitors 6 EHS node types (Air Quality, Water Quality, "
+        "Noise, Weather, Soil, Radiation/Gas) across 120 campus sensors.\n\n"
+        "Subscribes to `telemetry.enviro.*` on RabbitMQ, evaluates 7+ metrics against safety thresholds, "
+        "runs ML forecasts via the Strategy Pattern, generates actionable suggestions, "
+        "persists to InfluxDB, and publishes CRITICAL alerts.\n\n"
         "Design Patterns: **Strategy** (ML), **Observer** (AMQP), **Factory Method** (Evaluators)"
     ),
-    version="1.0.0",
+    version="2.0.0",
 )
 
 # Global references for dependency injection into routes
@@ -98,10 +123,11 @@ def startup_event():
     global _evaluator, _consumer, _influx, _publisher
 
     try:
-        print("=" * 55)
-        print("  EHS Domain Engine — Booting Up")
+        print("=" * 60)
+        print("  EHS Domain Engine v2.0 — Booting Up")
         print("  Smart City Living Lab | Team Member 2: Saicharan")
-        print("=" * 55)
+        print("  6 Node Types | 7+ Metrics | 3 Protocols")
+        print("=" * 60)
 
         # 1. Load config
         config = load_config()
@@ -152,10 +178,11 @@ def startup_event():
         )
         _consumer.start_listening()
 
-        print("[Main] EHS Engine fully operational on port 8002")
+        print(f"[Main] EHS Engine fully operational on port {SERVER_PORT}")
         print("[Main] Subscribed to: telemetry.enviro.#")
         print("[Main] Publishing alerts to: alerts.critical")
-        print("=" * 55)
+        print(f"[Main] Dashboard: http://localhost:{SERVER_PORT}/dashboard")
+        print("=" * 60)
 
     except Exception as e:
         print(f"\n[STARTUP ERROR] Failed to initialize EHS Engine:")
@@ -173,23 +200,34 @@ def shutdown_event():
 
 
 # ─────────────────────────────────────────────
-# API Routes
+# API Routes — Operations
 # ─────────────────────────────────────────────
 
 @app.get("/", tags=["Operations"])
 async def root():
     """Root endpoint — redirects users to useful pages."""
     return {
-        "service": "🌿 EHS Domain Engine",
+        "service": "🌿 EHS Domain Engine v2.0",
         "member": "Saicharan (Team Member 2)",
         "status": "running",
+        "node_types": [
+            "air_quality", "water_quality", "noise_monitor",
+            "weather_station", "soil_sensor", "radiation_gas"
+        ],
         "endpoints": {
             "Swagger UI": "/docs",
             "Health Check": "/health",
             "Thresholds": "/thresholds",
             "Manual Evaluate (POST)": "/evaluate",
+            "Predictions": "/predict/{node_id}",
+            "Time-Series Visualization": "/visualize/timeseries",
+            "Heatmap": "/visualize/heatmap",
+            "Suggestions": "/suggestions",
+            "Dashboard Data (JSON)": "/dashboard-data",
+            "Dashboard (HTML)": "/dashboard",
         },
         "design_patterns": ["Strategy (ML)", "Observer (AMQP)", "Factory Method (Evaluators)"],
+        "protocols": ["MQTT", "HTTP", "CoAP"],
     }
 
 
@@ -202,13 +240,20 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "ehs_engine",
+        "version": "2.0.0",
         "member": "Saicharan (Team Member 2)",
         "subscribed_topic": "telemetry.enviro.#",
         "alert_topic": "alerts.critical",
         "rabbitmq_connected": _consumer._connected if _consumer else False,
         "ml_strategy": type(_evaluator._predictor).__name__ if _evaluator else "not loaded",
+        "nodes_tracked": len(_evaluator._latest_evaluations) if _evaluator else 0,
+        "metrics_monitored": ["aqi", "water_ph", "noise_db", "pm25", "uv_index", "voc_ppb", "turbidity_ntu"],
     }
 
+
+# ─────────────────────────────────────────────
+# API Routes — Testing & Evaluation
+# ─────────────────────────────────────────────
 
 @app.post("/evaluate", response_model=EvaluatedReading, tags=["Testing"])
 async def manual_evaluate(telemetry: EHSTelemetry):
@@ -220,17 +265,21 @@ async def manual_evaluate(telemetry: EHSTelemetry):
     
     ```json
     {
-      "node_id": "EHS-NODE-001",
+      "node_id": "EHS-AQI-001",
       "domain": "ehs",
-      "timestamp": "2026-04-21T17:00:00",
-      "data": { "aqi": 350, "water_ph": 4.5, "is_critical": false }
+      "node_type": "air_quality",
+      "timestamp": "2026-04-23T08:00:00",
+      "data": {
+        "aqi": 350, "water_ph": 4.5, "is_critical": false,
+        "pm25": 180, "noise_db": 90, "voc_ppb": 2500,
+        "uv_index": 9, "turbidity_ntu": 60
+      }
     }
     ```
     """
     if _evaluator is None:
         raise HTTPException(status_code=503, detail="EHS Engine not initialized.")
-    result = _evaluator.evaluate(telemetry)
-    return result
+    return await run_in_threadpool(_evaluator.evaluate, telemetry)
 
 
 @app.get("/thresholds", tags=["Configuration"])
@@ -249,7 +298,215 @@ async def get_thresholds():
             "danger_min": _evaluator._ph_evaluator._danger_min,
             "danger_max": _evaluator._ph_evaluator._danger_max,
         },
+        "noise_db": {
+            "warning":  _evaluator._noise_evaluator._warning,
+            "critical": _evaluator._noise_evaluator._critical,
+        },
+        "pm25": {
+            "warning":  _evaluator._pm25_evaluator._warning,
+            "critical": _evaluator._pm25_evaluator._critical,
+        },
+        "uv_index": {
+            "warning":  _evaluator._uv_evaluator._warning,
+            "critical": _evaluator._uv_evaluator._critical,
+        },
+        "voc": {
+            "warning":  _evaluator._voc_evaluator._warning,
+            "critical": _evaluator._voc_evaluator._critical,
+        },
+        "turbidity": {
+            "warning":  _evaluator._turbidity_evaluator._warning,
+            "critical": _evaluator._turbidity_evaluator._critical,
+        },
     }
+
+
+# ─────────────────────────────────────────────
+# API Routes — Prediction
+# ─────────────────────────────────────────────
+
+@app.get("/predict/{node_id}", tags=["Prediction"])
+async def get_prediction(node_id: str):
+    """
+    Returns ML forecasts for a specific node based on its rolling history.
+    Uses the Strategy-Pattern predictor (Scikit-learn or TensorFlow).
+    """
+    if _evaluator is None:
+        raise HTTPException(status_code=503, detail="Engine not initialized.")
+    
+    result = _evaluator.get_prediction(node_id)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No sufficient history for node '{node_id}'. Send at least 3 readings via POST /evaluate."
+        )
+    return result
+
+
+# ─────────────────────────────────────────────
+# API Routes — Visualization
+# ─────────────────────────────────────────────
+
+@app.get("/visualize/timeseries", tags=["Visualization"])
+async def get_timeseries(
+    metric: str = Query(default="aqi", description="Metric to visualize: aqi, water_ph, noise_db, pm25"),
+    limit: int = Query(default=50, le=200, description="Max data points per node"),
+):
+    """
+    Returns time-series data for a specific metric across all tracked nodes.
+    Suitable for rendering with Chart.js, D3.js, or any charting library.
+    """
+    if _evaluator is None:
+        raise HTTPException(status_code=503, detail="Engine not initialized.")
+    return _evaluator.get_visualization_data(metric=metric, limit=limit)
+
+
+@app.get("/visualize/heatmap", tags=["Visualization"])
+async def get_heatmap():
+    """
+    Returns campus-wide metric heatmap data — latest value and status for every node.
+    Used for geographic overlay visualization on campus maps.
+    """
+    if _evaluator is None:
+        raise HTTPException(status_code=503, detail="Engine not initialized.")
+    return _evaluator.get_heatmap_data()
+
+
+# ─────────────────────────────────────────────
+# API Routes — Suggestions
+# ─────────────────────────────────────────────
+
+@app.get("/suggestions", tags=["Suggestions"])
+async def get_suggestions():
+    """
+    Returns actionable EHS suggestions based on current readings and ML forecasts.
+    Suggestions are severity-ranked: EMERGENCY > URGENT > CAUTION > INFO.
+    """
+    if _evaluator is None:
+        raise HTTPException(status_code=503, detail="Engine not initialized.")
+    suggestions = _evaluator.generate_suggestions()
+    return {
+        "total_suggestions": len(suggestions),
+        "suggestions": [s.dict() for s in suggestions],
+    }
+
+
+# ─────────────────────────────────────────────
+# API Routes — Dashboard
+# ─────────────────────────────────────────────
+
+@app.get("/dashboard-data", tags=["Dashboard"])
+async def get_dashboard_data():
+    """
+    Returns the full EHS dashboard JSON payload.
+    Includes: campus health score, metric cards, node statuses, and suggestions.
+    """
+    if _evaluator is None:
+        raise HTTPException(status_code=503, detail="Engine not initialized.")
+    summary = _evaluator.get_dashboard_summary()
+    return summary.dict()
+
+
+@app.get("/presentation-data", tags=["Presentation"])
+async def get_presentation_data():
+    """
+    Returns a single payload for the presentation demo.
+    Combines engine summary, middleware node catalog, visualizations, and suggestions.
+    """
+    if _evaluator is None:
+        raise HTTPException(status_code=503, detail="Engine not initialized.")
+
+    dashboard = _evaluator.get_dashboard_summary().dict()
+    node_statuses = dashboard.get("node_statuses", [])
+    primary_node = node_statuses[0]["node_id"] if node_statuses else None
+    middleware_base = get_middleware_base_url()
+
+    middleware_catalog = {}
+    middleware_nodes = {}
+    middleware_error = None
+    try:
+        catalog_response = requests.get(f"{middleware_base}/ehs/catalog", timeout=4)
+        middleware_catalog = catalog_response.json() if catalog_response.ok else {"error": catalog_response.text}
+        nodes_response = requests.get(f"{middleware_base}/ehs/nodes", timeout=4)
+        middleware_nodes = nodes_response.json() if nodes_response.ok else {"error": nodes_response.text}
+    except Exception as exc:
+        middleware_error = str(exc)
+
+    prediction = _evaluator.get_prediction(primary_node) if primary_node else None
+
+    return {
+        "flow": [
+            {
+                "id": "discover",
+                "title": "Discover Node Catalog",
+                "status": "done",
+                "detail": f"{len(middleware_catalog.get('nodes', [])) or len(node_statuses)} nodes discovered",
+            },
+            {
+                "id": "ingest",
+                "title": "Ingest Latest Telemetry",
+                "status": "done",
+                "detail": f"{dashboard.get('total_nodes', 0)} active nodes in memory",
+            },
+            {
+                "id": "predict",
+                "title": "Predict Risk Trajectory",
+                "status": "done" if prediction else "idle",
+                "detail": "ML forecast prepared for the most recent node" if prediction else "No forecast available yet",
+            },
+            {
+                "id": "visualize",
+                "title": "Render Visualization State",
+                "status": "done",
+                "detail": f"{dashboard.get('metric_cards', {}) and len(dashboard.get('metric_cards', {})) or 0} metric cards available",
+            },
+            {
+                "id": "suggest",
+                "title": "Generate Suggestions",
+                "status": "done",
+                "detail": f"{len(dashboard.get('suggestions', []))} actionable suggestions ready",
+            },
+        ],
+        "engine": dashboard,
+        "prediction": prediction,
+        "middleware": {
+            "base_url": middleware_base,
+            "catalog": middleware_catalog,
+            "nodes": middleware_nodes,
+            "error": middleware_error,
+        },
+        "generated_at": dashboard.get("generated_at") or None,
+    }
+
+
+@app.get("/dashboard", response_class=HTMLResponse, tags=["Dashboard"])
+async def serve_dashboard():
+    """
+    Serves the interactive EHS Dashboard HTML page.
+    The dashboard auto-refreshes by polling /dashboard-data every 5 seconds.
+    """
+    dashboard_path = os.path.join(_BASE_DIR, "static", "dashboard.html")
+    if os.path.exists(dashboard_path):
+        with open(dashboard_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    else:
+        return HTMLResponse(
+            content="<h1>Dashboard not found</h1><p>Ensure static/dashboard.html exists.</p>",
+            status_code=404,
+        )
+
+
+@app.get("/presentation", response_class=HTMLResponse, tags=["Presentation"])
+async def serve_presentation():
+    """Serves the presentation-focused start button demo page."""
+    presentation_path = os.path.join(_BASE_DIR, "static", "presentation.html")
+    if os.path.exists(presentation_path):
+        with open(presentation_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(
+        content="<h1>Presentation page not found</h1><p>Ensure static/presentation.html exists.</p>",
+        status_code=404,
+    )
 
 
 # ─────────────────────────────────────────────
@@ -264,6 +521,6 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="127.0.0.1",
-        port=8002,
+        port=SERVER_PORT,
         log_level="info",
     )

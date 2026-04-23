@@ -42,12 +42,25 @@ class InfluxWriter:
     def _connect(self):
         """Establish connection to InfluxDB."""
         try:
-            self._client    = InfluxDBClient(url=self._url, token=self._token, org=self._org)
+            # Quick socket-level check to see if InfluxDB is reachable
+            import socket
+            host = self._url.replace("http://", "").replace("https://", "").split(":")[0]
+            port = int(self._url.split(":")[-1].rstrip("/")) if ":" in self._url.split("//")[-1] else 8086
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            if result != 0:
+                raise ConnectionError(f"Cannot reach {host}:{port}")
+
+            self._client    = InfluxDBClient(url=self._url, token=self._token, org=self._org, timeout=2000)
             self._write_api = self._client.write_api(write_options=SYNCHRONOUS)
             print(f"[InfluxWriter] Connected to InfluxDB at {self._url}")
         except Exception as e:
             print(f"[InfluxWriter] WARNING: Could not connect to InfluxDB: {e}")
-            print("[InfluxWriter] Running in dry-run mode — data will be logged only.")
+            print("[InfluxWriter] Running in dry-run mode -- data will be logged only.")
+            self._client = None
+            self._write_api = None
 
     def write(self, reading: EvaluatedReading) -> bool:
         """

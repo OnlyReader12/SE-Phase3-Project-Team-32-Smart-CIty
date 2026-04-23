@@ -7,17 +7,23 @@ The EngineEvaluator never instantiates evaluators directly. It asks the factory:
   "Give me an evaluator for 'aqi'."
 The factory decides which concrete class to return.
 
-Extensibility: Adding "noise_db" (noise decibel monitoring) in the future only
-requires:
-  1. Creating NoiseDbEvaluator(ThresholdEvaluator) in threshold_evaluator.py
+Extensibility: Adding a new metric evaluator requires:
+  1. Creating the evaluator class in threshold_evaluator.py
   2. Adding one 'elif' case here.
   3. Zero changes anywhere else in the codebase.
+
+Expanded: Now supports 7 metric types (AQI, Water pH, Noise, PM2.5, UV, VOC, Turbidity).
 """
 
 from evaluator.threshold_evaluator import (
     ThresholdEvaluator,
     AQIThresholdEvaluator,
     WaterPhEvaluator,
+    NoiseThresholdEvaluator,
+    PM25ThresholdEvaluator,
+    UVIndexEvaluator,
+    VOCEvaluator,
+    TurbidityEvaluator,
 )
 
 
@@ -33,7 +39,7 @@ class EvaluatorFactory:
         Create and return the appropriate evaluator for the given metric.
 
         Args:
-            metric_type: Metric identifier string — "aqi" or "water_ph".
+            metric_type: Metric identifier string.
             thresholds:  The thresholds sub-dict from config.yaml.
 
         Returns:
@@ -58,8 +64,43 @@ class EvaluatorFactory:
                 danger_max=ph_cfg.get("danger_max", 9.5),
             )
 
+        elif metric_type == "noise_db":
+            noise_cfg = thresholds.get("noise_db", {})
+            return NoiseThresholdEvaluator(
+                warning_threshold=noise_cfg.get("warning", 70),
+                critical_threshold_val=noise_cfg.get("critical", 85),
+            )
+
+        elif metric_type == "pm25":
+            pm25_cfg = thresholds.get("pm25", {})
+            return PM25ThresholdEvaluator(
+                warning_threshold=pm25_cfg.get("warning", 35),
+                critical_threshold_val=pm25_cfg.get("critical", 150),
+            )
+
+        elif metric_type == "uv_index":
+            uv_cfg = thresholds.get("uv_index", {})
+            return UVIndexEvaluator(
+                warning_threshold=uv_cfg.get("warning", 6),
+                critical_threshold_val=uv_cfg.get("critical", 8),
+            )
+
+        elif metric_type == "voc":
+            voc_cfg = thresholds.get("voc", {})
+            return VOCEvaluator(
+                warning_threshold=voc_cfg.get("warning", 500),
+                critical_threshold_val=voc_cfg.get("critical", 2000),
+            )
+
+        elif metric_type == "turbidity":
+            turb_cfg = thresholds.get("turbidity", {})
+            return TurbidityEvaluator(
+                warning_threshold=turb_cfg.get("warning", 5),
+                critical_threshold_val=turb_cfg.get("critical", 50),
+            )
+
         else:
             raise ValueError(
                 f"[EvaluatorFactory] Unknown metric type: '{metric_type}'. "
-                f"Supported: 'aqi', 'water_ph'."
+                f"Supported: 'aqi', 'water_ph', 'noise_db', 'pm25', 'uv_index', 'voc', 'turbidity'."
             )

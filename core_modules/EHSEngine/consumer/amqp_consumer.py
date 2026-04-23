@@ -76,6 +76,9 @@ class AMQPConsumer:
                     port=self._port,
                     credentials=self._credentials,
                     heartbeat=60,
+                    socket_timeout=2,
+                    connection_attempts=1,
+                    retry_delay=0.5,
                 )
                 connection = pika.BlockingConnection(params)
                 channel    = connection.channel()
@@ -110,13 +113,14 @@ class AMQPConsumer:
                 channel.start_consuming()
 
             except pika.exceptions.AMQPConnectionError:
-                print("[AMQPConsumer] RabbitMQ unavailable — running in offline mode.")
-                print("[AMQPConsumer] Retrying in 10s... (or test via POST /evaluate)")
+                print("[AMQPConsumer] RabbitMQ unavailable -- running in offline mode.")
+                print("[AMQPConsumer] Will NOT retry further. Use POST /evaluate for testing.")
                 self._connected = False
-                import time; time.sleep(10)
+                return  # Don't retry forever — it blocks the GIL and stalls the API
             except Exception as e:
-                print(f"[AMQPConsumer] Unexpected error: {e}. Retrying in 5s...")
-                import time; time.sleep(5)
+                print(f"[AMQPConsumer] Unexpected error: {e}. Giving up consumer connection.")
+                self._connected = False
+                return
 
     def _on_message(self, channel, method, properties, body: bytes):
         """

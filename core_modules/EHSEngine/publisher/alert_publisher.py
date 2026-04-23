@@ -52,12 +52,24 @@ class AlertPublisher:
     def _connect(self):
         """Establish connection to RabbitMQ. Graceful if broker is offline."""
         try:
+            # Quick socket check to avoid pika blocking the GIL
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex((self._host, self._port))
+            sock.close()
+            if result != 0:
+                raise ConnectionError(f"RabbitMQ unreachable at {self._host}:{self._port}")
+
             params = pika.ConnectionParameters(
                 host=self._host,
                 port=self._port,
                 credentials=self._credentials,
                 heartbeat=60,
-                blocked_connection_timeout=30,
+                blocked_connection_timeout=5,
+                socket_timeout=2,
+                connection_attempts=1,
+                retry_delay=0.5,
             )
             self._connection = pika.BlockingConnection(params)
             self._channel    = self._connection.channel()
@@ -69,7 +81,8 @@ class AlertPublisher:
             print(f"[AlertPublisher] Connected to RabbitMQ at {self._host}:{self._port}")
         except Exception as e:
             print(f"[AlertPublisher] WARNING: Cannot connect to RabbitMQ: {e}")
-            print("[AlertPublisher] Running in dry-run mode — alerts will be logged only.")
+            print("[AlertPublisher] Running in dry-run mode -- alerts will be logged only.")
+            self._connection = None
             self._channel = None
 
     def publish(
@@ -122,8 +135,6 @@ class AlertPublisher:
 
         except Exception as e:
             print(f"[AlertPublisher] ERROR publishing alert: {e}")
-            # Attempt reconnect on next call
-            self._connect()
             return False
 
     def close(self):

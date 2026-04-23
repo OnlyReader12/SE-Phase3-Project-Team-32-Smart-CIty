@@ -1,8 +1,12 @@
 # ============================================================
-# EHS Domain Engine — Runtime Configuration
+# EHS Domain Engine — Runtime Configuration (Expanded)
 # ============================================================
 # Strategy Pattern: Change 'ml_strategy' here to swap the
 # entire forecasting backend WITHOUT touching any source code.
+#
+# Expanded: Now includes thresholds for 7 EHS metric types
+# across 6 node types (Air Quality, Water, Noise, Weather,
+# Soil, Radiation/Gas).
 # ============================================================
 
 ehs_engine:
@@ -12,16 +16,48 @@ ehs_engine:
   model_path: "./models/aqi_forecast.joblib"
   tensorflow_model_path: "./models/aqi_forecast_tf"
 
-  # --- Safety Thresholds ---
+  # --- Safety Thresholds (7 Metric Types) ---
   thresholds:
+    # Air Quality Index (US EPA standard)
     aqi:
       warning: 150      # Unhealthy for sensitive groups
       critical: 300     # Hazardous — trigger SMS alert
+
+    # Water pH (WHO drinking water guidelines)
     water_ph:
       safe_min: 6.5
       safe_max: 8.5
       danger_min: 5.0   # Acidic extreme — trigger alert
       danger_max: 9.5   # Alkaline extreme — trigger alert
+
+    # Noise Level in dB (WHO / OSHA guidelines)
+    noise_db:
+      warning: 70       # Extended exposure risk
+      critical: 85      # Hearing damage risk
+
+    # PM2.5 Particulate Matter (WHO 2021)
+    pm25:
+      warning: 35       # Unhealthy for sensitive groups (µg/m³)
+      critical: 150     # Very unhealthy for everyone
+
+    # UV Index (WHO UV scale)
+    uv_index:
+      warning: 6        # High — protection required
+      critical: 8       # Very high — avoid outdoor activities
+
+    # Volatile Organic Compounds (EPA)
+    voc:
+      warning: 500      # Elevated, investigate source (ppb)
+      critical: 2000    # Hazardous, possible chemical leak
+
+    # Water Turbidity (WHO drinking water)
+    turbidity:
+      warning: 5        # Cloudy, potential contamination (NTU)
+      critical: 50      # Severely turbid, unsafe
+
+  # --- Middleware Configuration ---
+  middleware:
+    base_url: "http://localhost:8001"
 
   # --- RabbitMQ (AMQP) Configuration ---
   rabbitmq:
