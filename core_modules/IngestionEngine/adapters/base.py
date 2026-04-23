@@ -12,29 +12,39 @@ class ForwarderStrategy(ABC):
 class RabbitMQForwarder(ForwarderStrategy):
     """
     Forwards the cleanly converted object to the Persistent Middleware via RabbitMQ.
-    Uses Asynchronous Eventual Persistence.
+    Automatically attempts to reconnect if the connection is lost.
     """
-    def __init__(self, host="localhost"):
+    def __init__(self, host="127.0.0.1"):
         self.host = host
+        self.connection = None
+        self.channel = None
+        self._connect()
+
+    def _connect(self):
+        """Establish connection and declare exchange."""
         try:
-            # We establish connection inside or keep a permanent connection.
-            # For simplicity, keeping a persistent connection in init.
-            self.connection = pika.BlockingConnection(pika.ConnectionParameters(self.host))
+            self.connection = pika.BlockingConnection(
+                pika.ConnectionParameters(self.host, connection_attempts=3, retry_delay=2)
+            )
             self.channel = self.connection.channel()
             self.channel.exchange_declare(exchange='smartcity_exchange', exchange_type='topic')
-            print("[Ingestion Engine] RabbitMQForwarder connected to broker.")
+            print(f"[Ingestion Engine] Connected to RabbitMQ at {self.host}")
         except Exception as e:
-            print(f"[Ingestion Engine] Failed to connect to RabbitMQ broker: {e}")
+            print(f"[Ingestion Engine] Connection to RabbitMQ failed: {e}")
             self.connection = None
 
     def forward(self, standard_obj: SmartCityObject) -> bool:
+        # Check if we need to reconnect
         if not self.connection or self.connection.is_closed:
-            print("[Ingestion Engine] Dropping message, RMQ connection down.")
+            print("[Ingestion Engine] RMQ connection down. Attempting to reconnect...")
+            self._connect()
+            
+        if not self.connection or self.connection.is_closed:
+            print("[Ingestion Engine] Dropping message, RMQ still unreachable.")
             return False
             
         try:
             payload_json = json.dumps(standard_obj.dict())
-            print(f"[Ingestion Engine] Forwarding Payload: {payload_json}")
             self.channel.basic_publish(
                 exchange='smartcity_exchange',
                 routing_key='ingestion.raw',
@@ -42,7 +52,8 @@ class RabbitMQForwarder(ForwarderStrategy):
             )
             return True
         except Exception as e:
-            print(f"[Ingestion] Failed to reach Middleware via RMQ: {e}")
+            print(f"[Ingestion] Failed to forward via RMQ: {e}")
+            self.connection = None # Reset for next attempt
             return False
 
 class ProtocolAdapter(ABC):

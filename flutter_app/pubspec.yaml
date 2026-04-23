@@ -1,0 +1,48 @@
+name: smartcity_flutter
+description: Smart City Living Lab — Flutter Client (Web + Mobile)
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Networking
+  dio: ^5.4.0
+
+  # State management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+
+  # Routing
+  go_router: ^13.2.0
+
+  # Charts (Analyst dashboard)
+  fl_chart: ^0.67.0
+
+  # flutter_map and latlong2 temporarily removed (cache repair needed)
+  # flutter_map: ^6.1.0
+  # latlong2: ^0.9.0
+
+  # Local storage (JWT tokens)
+  shared_preferences: ^2.2.2
+
+  # Date/time formatting
+  intl: ^0.19.0
+
+  # Icons
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.8
+  riverpod_generator: ^2.3.9
+
+flutter:
+  uses-material-design: true
+

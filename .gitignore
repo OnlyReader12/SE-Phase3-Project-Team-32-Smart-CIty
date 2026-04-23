@@ -1,0 +1,8 @@
+# Matches any folder starting with '.' and ending with 'venv'
+.*venv/
+
+# Standard Python cache
+__pycache__/
+*.py[cod]
+
+docker/rabbitmq/data

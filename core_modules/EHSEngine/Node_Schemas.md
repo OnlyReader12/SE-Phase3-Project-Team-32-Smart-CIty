@@ -49,6 +49,15 @@
 | **Environmental Sensor Node** | Reports weather and air conditions        | CoAP / MQTT                    | `{ temperature, humidity, pm2_5, co2, noise_db }`       |
 
 
+# 🔁 Actuator State Feedback Table (WebSocket → Ingestion)
+| Node Type                         | State Payload (WebSocket → Ingestion)        |
+| --------------------------------- | -------------------------------------------- |
+| **Valve Control Node**            | `{ state: OPEN/CLOSED, valve_level }`        |
+| **Water Treatment Control Node**  | `{ state: RUNNING/STOPPED, chemical_dose }`  |
+| **Water Pump Node**               | `{ state: ON/OFF, flow_level, power_usage }` |
+| **Ventilation Control Node**      | `{ state: ON/OFF, speed }`                   |
+| **Air Purification Control Node** | `{ state: ON/OFF, mode, air_quality_index }` |
+
 
 
 # System Flow

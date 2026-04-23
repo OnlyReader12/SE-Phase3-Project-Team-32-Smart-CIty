@@ -1,0 +1,311 @@
+{
+  "_comment": "Smart City IoT Simulator — Master Schema Config. Add a new node type here and it will be auto-simulated. No Python changes needed.",
+
+  "simulation": {
+    "default_interval_s": 30,
+    "interval_jitter_s": 5
+  },
+
+  "ingestion_endpoints": {
+    "http":              "http://127.0.0.1:8000/api/telemetry",
+    "mqtt_host":         "127.0.0.1",
+    "mqtt_port":         1883,
+    "mqtt_topic_prefix": "smartcity/telemetry",
+    "coap_uri":          "coap://127.0.0.1:5683/telemetry",
+    "ws_url":            "ws://127.0.0.1:8000/ws/actuator"
+  },
+
+  "campus_zones": [
+    { "zone_id": "BLK-A",     "name": "Engineering Block A",  "lat": 12.9716, "lon": 77.5946 },
+    { "zone_id": "BLK-B",     "name": "Engineering Block B",  "lat": 12.9720, "lon": 77.5952 },
+    { "zone_id": "LIB",       "name": "Central Library",      "lat": 12.9712, "lon": 77.5940 },
+    { "zone_id": "HOSTEL-N",  "name": "North Hostel",         "lat": 12.9730, "lon": 77.5960 },
+    { "zone_id": "HOSTEL-S",  "name": "South Hostel",         "lat": 12.9705, "lon": 77.5935 },
+    { "zone_id": "CAFETERIA", "name": "Main Cafeteria",       "lat": 12.9718, "lon": 77.5948 },
+    { "zone_id": "SPORTS",    "name": "Sports Complex",       "lat": 12.9725, "lon": 77.5970 },
+    { "zone_id": "ADMIN",     "name": "Administration Block", "lat": 12.9710, "lon": 77.5938 },
+    { "zone_id": "GARDEN",    "name": "Campus Garden",        "lat": 12.9700, "lon": 77.5930 },
+    { "zone_id": "PARKING",   "name": "Parking Lot",          "lat": 12.9735, "lon": 77.5975 }
+  ],
+
+  "node_types": [
+
+    {
+      "node_type":   "solar_panel",
+      "domain":      "energy",
+      "protocol":    "MQTT",
+      "is_actuator": false,
+      "count":       8,
+      "payload_schema": {
+        "power_w":    { "generator": "sine",        "amplitude": 500,  "offset": 500,  "period_s": 86400, "phase_h": 6,  "min": 0,   "max": 1000 },
+        "energy_kwh": { "generator": "random_walk", "initial": 10.0,   "min": 0,       "max": 50,         "step": 0.4  },
+        "voltage":    { "generator": "random_walk", "initial": 230.0,  "min": 220,     "max": 240,        "step": 0.5  },
+        "current":    { "generator": "random_walk", "initial": 4.5,    "min": 0,       "max": 10,         "step": 0.1  },
+        "status":     { "generator": "step_change", "states": ["ACTIVE", "IDLE", "FAULT"], "initial": "ACTIVE", "flip_prob": 0.01 }
+      }
+    },
+
+    {
+      "node_type":   "smart_energy_meter",
+      "domain":      "energy",
+      "protocol":    "MQTT",
+      "is_actuator": false,
+      "count":       6,
+      "payload_schema": {
+        "voltage":      { "generator": "random_walk", "initial": 230.0, "min": 210, "max": 250,  "step": 1.0  },
+        "current":      { "generator": "random_walk", "initial": 5.0,   "min": 0,   "max": 20,   "step": 0.3  },
+        "power":        { "generator": "random_walk", "initial": 1150,  "min": 500, "max": 5000, "step": 50   },
+        "energy_kwh":   { "generator": "random_walk", "initial": 20.0,  "min": 0,   "max": 200,  "step": 0.5  },
+        "power_factor": { "generator": "random_walk", "initial": 0.95,  "min": 0.8, "max": 1.0,  "step": 0.01 }
+      }
+    },
+
+    {
+      "node_type":   "battery_storage",
+      "domain":      "energy",
+      "protocol":    "HTTP",
+      "is_actuator": false,
+      "count":       4,
+      "payload_schema": {
+        "soc":         { "generator": "sine",        "amplitude": 40,  "offset": 50,  "period_s": 86400, "phase_h": 18, "min": 5,  "max": 95  },
+        "voltage":     { "generator": "random_walk", "initial": 48.0,  "min": 44,     "max": 54,         "step": 0.2  },
+        "charge_rate": { "generator": "random_walk", "initial": 1.5,   "min": -5,     "max": 5,          "step": 0.1  },
+        "status":      { "generator": "step_change", "states": ["CHARGING", "DISCHARGING", "IDLE"], "initial": "CHARGING", "flip_prob": 0.02 }
+      }
+    },
+
+    {
+      "node_type":   "grid_transformer",
+      "domain":      "energy",
+      "protocol":    "HTTP",
+      "is_actuator": false,
+      "count":       3,
+      "payload_schema": {
+        "load_percent": { "generator": "random_walk", "initial": 55, "min": 10, "max": 95, "step": 2.0 },
+        "temperature":  { "generator": "random_walk", "initial": 45, "min": 30, "max": 80, "step": 0.5 },
+        "fault_status": { "generator": "step_change", "states": ["OK", "WARNING", "FAULT"], "initial": "OK", "flip_prob": 0.005 }
+      }
+    },
+
+    {
+      "node_type":   "occupancy_footfall",
+      "domain":      "energy",
+      "protocol":    "CoAP",
+      "is_actuator": false,
+      "count":       4,
+      "payload_schema": {
+        "occupancy": { "generator": "step_change", "states": ["OCCUPIED", "EMPTY"], "initial": "OCCUPIED", "flip_prob": 0.05 },
+        "count":     { "generator": "random_walk", "initial": 20, "min": 0, "max": 300, "step": 5 }
+      }
+    },
+
+    {
+      "node_type":   "ac_unit",
+      "domain":      "energy",
+      "protocol":    "WebSocket",
+      "is_actuator": true,
+      "count":       5,
+      "payload_schema": {
+        "state":        { "generator": "step_change", "states": ["ON", "OFF"],            "initial": "ON",   "flip_prob": 0.03 },
+        "set_temp":     { "generator": "step_change", "states": [22, 24, 26],             "initial": 24,     "flip_prob": 0.02 },
+        "mode":         { "generator": "step_change", "states": ["COOL", "FAN", "AUTO"],  "initial": "COOL", "flip_prob": 0.01 },
+        "current_temp": { "generator": "random_walk", "initial": 25.0, "min": 18, "max": 35,   "step": 0.3  },
+        "power_usage":  { "generator": "random_walk", "initial": 1500, "min": 0,  "max": 3500, "step": 50   }
+      }
+    },
+
+    {
+      "node_type":   "indoor_lighting",
+      "domain":      "energy",
+      "protocol":    "WebSocket",
+      "is_actuator": true,
+      "count":       5,
+      "payload_schema": {
+        "state":       { "generator": "step_change", "states": ["ON", "OFF"], "initial": "ON", "flip_prob": 0.04 },
+        "brightness":  { "generator": "random_walk", "initial": 80, "min": 0, "max": 100, "step": 5 },
+        "power_usage": { "generator": "random_walk", "initial": 40, "min": 0, "max": 200, "step": 3 }
+      }
+    },
+
+    {
+      "node_type":   "outdoor_lamp",
+      "domain":      "energy",
+      "protocol":    "WebSocket",
+      "is_actuator": true,
+      "count":       5,
+      "payload_schema": {
+        "state":        { "generator": "step_change", "states": ["ON", "OFF"],     "initial": "ON", "flip_prob": 0.02 },
+        "brightness":   { "generator": "random_walk", "initial": 100, "min": 0,   "max": 100, "step": 5 },
+        "fault_status": { "generator": "step_change", "states": ["OK", "FAULT"],   "initial": "OK", "flip_prob": 0.005 }
+      }
+    },
+
+    {
+      "node_type":   "water_quality",
+      "domain":      "water",
+      "protocol":    "CoAP",
+      "is_actuator": false,
+      "count":       6,
+      "payload_schema": {
+        "ph":                  { "generator": "random_walk", "initial": 7.2,  "min": 6.5, "max": 8.5, "step": 0.05 },
+        "turbidity":           { "generator": "random_walk", "initial": 1.5,  "min": 0.1, "max": 10,  "step": 0.1  },
+        "tds":                 { "generator": "random_walk", "initial": 250,  "min": 50,  "max": 600, "step": 5    },
+        "temperature":         { "generator": "random_walk", "initial": 22.0, "min": 10,  "max": 35,  "step": 0.3  },
+        "contamination_level": { "generator": "step_change", "states": ["SAFE", "MODERATE", "CRITICAL"], "initial": "SAFE", "flip_prob": 0.02 }
+      }
+    },
+
+    {
+      "node_type":   "reservoir_level",
+      "domain":      "water",
+      "protocol":    "MQTT",
+      "is_actuator": false,
+      "count":       4,
+      "payload_schema": {
+        "level_percent": { "generator": "random_walk", "initial": 75,   "min": 5,   "max": 100,   "step": 0.8 },
+        "volume":        { "generator": "random_walk", "initial": 7500, "min": 500, "max": 10000, "step": 80  }
+      }
+    },
+
+    {
+      "node_type":   "soil_moisture",
+      "domain":      "water",
+      "protocol":    "CoAP",
+      "is_actuator": false,
+      "count":       5,
+      "payload_schema": {
+        "moisture_level": { "generator": "sine", "amplitude": 30, "offset": 50, "period_s": 86400, "phase_h": 14, "min": 10, "max": 90 }
+      }
+    },
+
+    {
+      "node_type":   "smart_water_meter",
+      "domain":      "water",
+      "protocol":    "MQTT",
+      "is_actuator": false,
+      "count":       5,
+      "payload_schema": {
+        "flow_rate":         { "generator": "random_walk", "initial": 5.0, "min": 0,   "max": 30,   "step": 0.5 },
+        "total_consumption": { "generator": "random_walk", "initial": 100, "min": 0,   "max": 5000, "step": 2   },
+        "leak_detected":     { "generator": "step_change", "states": [false, true], "initial": false, "flip_prob": 0.01 }
+      }
+    },
+
+    {
+      "node_type":   "valve_control",
+      "domain":      "water",
+      "protocol":    "WebSocket",
+      "is_actuator": true,
+      "count":       4,
+      "payload_schema": {
+        "state":       { "generator": "step_change", "states": ["OPEN", "CLOSED"], "initial": "CLOSED", "flip_prob": 0.04 },
+        "valve_level": { "generator": "random_walk", "initial": 50, "min": 0, "max": 100, "step": 5 }
+      }
+    },
+
+    {
+      "node_type":   "water_treatment",
+      "domain":      "water",
+      "protocol":    "WebSocket",
+      "is_actuator": true,
+      "count":       3,
+      "payload_schema": {
+        "state":         { "generator": "step_change", "states": ["RUNNING", "STOPPED"], "initial": "RUNNING", "flip_prob": 0.03 },
+        "chemical_dose": { "generator": "random_walk", "initial": 2.5, "min": 0, "max": 10, "step": 0.2 }
+      }
+    },
+
+    {
+      "node_type":   "water_pump",
+      "domain":      "water",
+      "protocol":    "WebSocket",
+      "is_actuator": true,
+      "count":       3,
+      "payload_schema": {
+        "state":       { "generator": "step_change", "states": ["ON", "OFF"], "initial": "ON", "flip_prob": 0.03 },
+        "flow_level":  { "generator": "random_walk", "initial": 60,  "min": 0, "max": 100,  "step": 4  },
+        "power_usage": { "generator": "random_walk", "initial": 800, "min": 0, "max": 2000, "step": 30 }
+      }
+    },
+
+    {
+      "node_type":   "air_quality",
+      "domain":      "air",
+      "protocol":    "MQTT",
+      "is_actuator": false,
+      "count":       5,
+      "payload_schema": {
+        "pm2_5": { "generator": "random_walk", "initial": 12,   "min": 1,   "max": 250,  "step": 2    },
+        "pm10":  { "generator": "random_walk", "initial": 25,   "min": 1,   "max": 400,  "step": 3    },
+        "co2":   { "generator": "random_walk", "initial": 420,  "min": 350, "max": 2000, "step": 10   },
+        "no2":   { "generator": "random_walk", "initial": 0.02, "min": 0,   "max": 0.2,  "step": 0.005},
+        "o3":    { "generator": "random_walk", "initial": 0.03, "min": 0,   "max": 0.1,  "step": 0.002}
+      }
+    },
+
+    {
+      "node_type":   "temp_humidity",
+      "domain":      "air",
+      "protocol":    "CoAP",
+      "is_actuator": false,
+      "count":       5,
+      "payload_schema": {
+        "temperature": { "generator": "sine",        "amplitude": 7,  "offset": 26, "period_s": 86400, "phase_h": 14, "min": 15, "max": 40 },
+        "humidity":    { "generator": "random_walk", "initial": 55,   "min": 20,    "max": 95, "step": 1.5 }
+      }
+    },
+
+    {
+      "node_type":   "wind_monitor",
+      "domain":      "air",
+      "protocol":    "MQTT",
+      "is_actuator": false,
+      "count":       3,
+      "payload_schema": {
+        "wind_speed":     { "generator": "random_walk", "initial": 12,  "min": 0,   "max": 60,  "step": 1.5 },
+        "wind_direction": { "generator": "random_walk", "initial": 180, "min": 0,   "max": 360, "step": 10  }
+      }
+    },
+
+    {
+      "node_type":   "environmental_sensor",
+      "domain":      "air",
+      "protocol":    "CoAP",
+      "is_actuator": false,
+      "count":       5,
+      "payload_schema": {
+        "temperature": { "generator": "sine",        "amplitude": 6,  "offset": 27, "period_s": 86400, "phase_h": 14, "min": 15, "max": 40 },
+        "humidity":    { "generator": "random_walk", "initial": 60,   "min": 20,    "max": 95,  "step": 1.5 },
+        "pm2_5":       { "generator": "random_walk", "initial": 14,   "min": 1,     "max": 250, "step": 2   },
+        "co2":         { "generator": "random_walk", "initial": 450,  "min": 350,   "max": 2000,"step": 10  },
+        "noise_db":    { "generator": "random_walk", "initial": 52,   "min": 30,    "max": 110, "step": 1.5 }
+      }
+    },
+
+    {
+      "node_type":   "ventilation_control",
+      "domain":      "air",
+      "protocol":    "WebSocket",
+      "is_actuator": true,
+      "count":       6,
+      "payload_schema": {
+        "state": { "generator": "step_change", "states": ["ON", "OFF"],                  "initial": "ON",     "flip_prob": 0.03 },
+        "speed": { "generator": "step_change", "states": ["LOW", "MEDIUM", "HIGH"],      "initial": "MEDIUM", "flip_prob": 0.05 }
+      }
+    },
+
+    {
+      "node_type":   "air_purification",
+      "domain":      "air",
+      "protocol":    "WebSocket",
+      "is_actuator": true,
+      "count":       6,
+      "payload_schema": {
+        "state":             { "generator": "step_change", "states": ["ON", "OFF"],                "initial": "ON",   "flip_prob": 0.03 },
+        "mode":              { "generator": "step_change", "states": ["AUTO", "TURBO", "SLEEP"],   "initial": "AUTO", "flip_prob": 0.02 },
+        "air_quality_index": { "generator": "random_walk", "initial": 45, "min": 0, "max": 300,   "step": 3 }
+      }
+    }
+
+  ]
+}

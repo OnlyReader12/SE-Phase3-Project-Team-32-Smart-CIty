@@ -1,6 +1,21 @@
+# IngestionEngine — Python dependencies
+# Install: pip install -r requirements.txt
+
+# Web framework + ASGI server
 fastapi==0.103.1
 uvicorn==0.23.2
-requests==2.31.0
+
+# Paho MQTT client (MqttAdapter subscriber, background thread)
 paho-mqtt==1.6.1
+
+# Embedded MQTT broker (no external Mosquitto needed)
 amqtt==0.11.0
+
+# RabbitMQ client (RabbitMQForwarder → Persistent Middleware)
 pika==1.3.2
+
+# CoAP server (coap_adapter — runs inside uvicorn's asyncio loop)
+aiocoap>=0.4.7
+
+# WebSocket server support (FastAPI built-in + websockets for typing)
+websockets>=12.0

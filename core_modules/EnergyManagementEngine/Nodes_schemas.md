@@ -40,6 +40,15 @@
 | **Water Pump Node**           | Controls water flow systems               | MQTT / HTTP                    | `{ command: ON/OFF, flow_level }`                       |
 
 
+# 🔁 Smart Appliance State Feedback Table (WebSocket → Ingestion)
+| Node Type                  | State Payload (WebSocket → Ingestion)                          |
+| -------------------------- | -------------------------------------------------------------- |
+| **AC Unit Node**           | `{ state: ON/OFF, set_temp, mode, current_temp, power_usage }` |
+| **Indoor Lighting Node**   | `{ state: ON/OFF, brightness, power_usage }`                   |
+| **Outdoor Lamp Post Node** | `{ state: ON/OFF, brightness, fault_status }`                  |
+| **Water Pump Node**        | `{ state: ON/OFF, flow_level, power_usage }`                   |
+
+
 # System Flow 
 ```
 IoT Data Nodes

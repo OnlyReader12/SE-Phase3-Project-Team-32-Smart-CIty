@@ -1,2 +1,17 @@
-requests==2.31.0
-paho-mqtt==1.6.1
+# IoT Data Generator — dependencies
+# Install: pip install -r requirements.txt
+
+# Async HTTP client (HttpSender)
+aiohttp>=3.9.0
+
+# Async MQTT client (MqttSender)
+aiomqtt>=1.2.0
+
+# Async CoAP client + server (CoAPSender + Ingestion CoAP Adapter)
+aiocoap>=0.4.7
+
+# Async WebSocket client (WebSocketSender)
+websockets>=12.0
+
+# Data validation
+pydantic>=2.0
