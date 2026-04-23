@@ -2,14 +2,14 @@ import threading
 import time
 from fastapi import FastAPI, Request
 from broker.embedded_mqtt import start_embedded_broker_sync
-from adapters.base import MiddlewareForwarder
+from adapters.base import RabbitMQForwarder
 from adapters.http_adapter import HttpAdapter
 from adapters.mqtt_adapter import MqttAdapter
 
 app = FastAPI(title="IoT Ingestion Engine")
 
 # Wire dependencies (Dependency Injection)
-forwarder = MiddlewareForwarder(target_url="http://localhost:8001/middleware/ingest")
+forwarder = RabbitMQForwarder(host="localhost")
 http_adapter = HttpAdapter(forwarder)
 mqtt_adapter = MqttAdapter(forwarder)
 

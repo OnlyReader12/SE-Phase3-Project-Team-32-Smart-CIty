@@ -9,28 +9,6 @@ from services.message_broker import RabbitMQPublisher
 router = APIRouter()
 publisher = RabbitMQPublisher()
 
-@router.post("/middleware/ingest")
-async def ingest_standard_data(payload: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """
-    Receives standard JSON securely from the IoT Ingestion layer.
-    Saves it locally to guarantee persistency.
-    """
-    # 1. Guarantee Persistence (Local SQLite store)
-    record = TelemetryRecord(
-        node_id=payload.get("node_id"),
-        domain=payload.get("domain"),
-        protocol_source=payload.get("protocol_source"),
-        timestamp=payload.get("timestamp"),
-        payload_json=json.dumps(payload.get("payload", {}))
-    )
-    db.add(record)
-    db.commit()
-    
-    # 2. Fire and Forget to the Central RabbitMQ Bus
-    # Use background tasks to prevent AMQP latency from blocking HTTP threads
-    background_tasks.add_task(publisher.publish_telemetry, payload.get("domain"), payload)
-    
-    return {"status": "persisted_and_published"}
 
 @router.get("/history/{node_id}")
 def get_node_history(node_id: str, limit: int = 50, db: Session = Depends(get_db)):
