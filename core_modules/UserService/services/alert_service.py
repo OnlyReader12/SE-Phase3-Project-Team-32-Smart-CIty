@@ -56,6 +56,7 @@ DOMAIN_TO_TEAM = {
     "energy": Team.ENERGY,
     "water":  Team.EHS,
     "air":    Team.EHS,
+    "ehs":    Team.EHS,   # BUG FIX: EHSEngine rules use "ehs" domain
 }
 
 

@@ -100,6 +100,10 @@ class AssignmentStatusUpdate(BaseModel):
 class AssignmentNotesUpdate(BaseModel):
     notes: str
 
+class AssignmentResolve(BaseModel):
+    status: AssignmentStatus
+    notes: str
+
 class AssignmentOut(BaseModel):
     id: str
     servicer_id: str

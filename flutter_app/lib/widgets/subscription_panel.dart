@@ -111,25 +111,6 @@ class _SubscriptionPanelState extends ConsumerState<SubscriptionPanel> {
           ]),
           const SizedBox(height: 14),
 
-          // Search bar
-          TextField(
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: 'Search zones…',
-              hintStyle: const TextStyle(color: Color(0xFF64748B)),
-              prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
-              filled: true,
-              fillColor: const Color(0xFF0F172A),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
-          ),
-          const SizedBox(height: 14),
-
           // Domain filters
           const Text('Filter by Domain',
               style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
@@ -140,6 +121,57 @@ class _SubscriptionPanelState extends ConsumerState<SubscriptionPanel> {
             _domainChip('water', '💧 Water', const Color(0xFF38BDF8)),
             const SizedBox(width: 8),
             _domainChip('air', '🌬 Air', const Color(0xFF4ADE80)),
+            const Spacer(),
+            TextButton(
+              onPressed: () => setState(() => _domains.clear()),
+              child: const Text('Clear', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+            ),
+          ]),
+          const SizedBox(height: 14),
+
+          // Search bar
+          Row(children: [
+            Expanded(
+              child: TextField(
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Search zones…',
+                  hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                  prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+              ),
+            ),
+            const SizedBox(width: 8),
+            catalogAsync.when(
+              data: (catalog) {
+                final filtered = (catalog['zones'] as List? ?? [])
+                    .cast<Map<String, dynamic>>()
+                    .where((z) {
+                      final zId = (z['zone_id'] as String? ?? '').toLowerCase();
+                      return _searchQuery.isEmpty || zId.contains(_searchQuery);
+                    }).toList();
+                return TextButton(
+                  onPressed: () {
+                    setState(() {
+                      for (final z in filtered) {
+                        _zones.add(z['zone_id']);
+                      }
+                    });
+                  },
+                  child: const Text('Select All', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11)),
+                );
+              },
+              loading: () => const SizedBox(),
+              error: (_, __) => const SizedBox(),
+            ),
           ]),
           const SizedBox(height: 14),
 

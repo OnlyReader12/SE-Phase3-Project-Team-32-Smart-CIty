@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../widgets/kpi_card.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/rule_charts.dart';
 
 /// Analyst Dashboard — team-scoped: Energy analyst sees Energy only,
 /// EHS analyst sees Water + Air.
@@ -109,43 +109,61 @@ class DomainView extends StatelessWidget {
       }
     }
 
+    final avg   = _avgValue();
+    final peak  = (data['peak_power_w'] as num?)?.toDouble() ?? avg;
+    final faults = (data['fault_count'] ?? data['contamination_events'] ?? 0) as int;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _buildKpiRow(),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
-        // Node count badge
         if ((data['node_count'] ?? data['active_nodes'] ?? 0) > 0)
           _infoBanner('${data['node_count'] ?? data['active_nodes']} nodes active'),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
-        // Trend chart
-        Card(
-          color: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Trend & Forecast (next 3 readings)',
-                  style: const TextStyle(color: Colors.white,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(
-                prediction.isEmpty
-                    ? 'No data yet — make sure Simulator is running'
-                    : '${prediction.length} data points  •  dashed = predicted',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(height: 180, child: _buildChart(prediction)),
-            ]),
+        // ── Rule-Specific Charts ──────────────────────────────────────
+        if (domain == 'energy') ...[
+          PowerBalanceChart(
+              avgPowerW: avg, peakPowerW: peak, prediction: prediction),
+          const SizedBox(height: 12),
+          SolarEfficiencyChart(avgPowerW: avg, peakPowerW: peak),
+          const SizedBox(height: 12),
+          ConsumptionAnomalyChart(prediction: prediction, faultCount: faults),
+          const SizedBox(height: 12),
+          GridStabilityChart(avgPowerW: avg, faultCount: faults),
+          const SizedBox(height: 12),
+          DeviceScheduleChart(faultCount: faults),
+        ],
+
+        if (domain == 'water') ...[
+          WaterQualityChart(
+            phAvg: (data['ph_avg'] as num?)?.toDouble() ?? 7.0,
+            events: faults,
+            prediction: prediction,
           ),
-        ),
+          const SizedBox(height: 12),
+          WaterSafetyChart(events: faults),
+          const SizedBox(height: 12),
+          EquipmentHealthChart(events: faults),
+        ],
 
-        // Anomalies
-        if ((data['fault_count'] ?? data['contamination_events'] ?? 0) > 0) ...[
+        if (domain == 'air') ...[
+          AirQualityRadarChart(
+            pm25: (data['pm25_avg'] as num?)?.toDouble() ?? 15.0,
+            co2:  (data['co2_avg']  as num?)?.toDouble() ?? 500.0,
+          ),
+          const SizedBox(height: 12),
+          IndoorComfortChart(
+            pm25: (data['pm25_avg'] as num?)?.toDouble() ?? 15.0,
+            co2:  (data['co2_avg']  as num?)?.toDouble() ?? 500.0,
+          ),
+        ],
+
+        // ── Anomaly Banner ────────────────────────────────────────────
+        if (faults > 0) ...[
           const SizedBox(height: 16),
           Card(
             color: const Color(0xFF7C2D12),
@@ -155,15 +173,14 @@ class DomainView extends StatelessWidget {
               child: Row(children: [
                 const Icon(Icons.warning_amber, color: Colors.orange),
                 const SizedBox(width: 10),
-                Text(
-                  '${data['fault_count'] ?? data['contamination_events']} anomalies detected',
-                  style: const TextStyle(color: Colors.white,
-                      fontWeight: FontWeight.bold),
-                ),
+                Text('$faults anomalies / contamination events detected',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
               ]),
             ),
           ),
         ],
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -234,92 +251,5 @@ class DomainView extends StatelessWidget {
             color: const Color(0xFF818CF8))),
       ]);
     }
-  }
-
-  Widget _buildChart(List<double> values) {
-    if (values.isEmpty) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: const [
-          Icon(Icons.show_chart, color: Color(0xFF334155), size: 40),
-          SizedBox(height: 8),
-          Text('Waiting for data…',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-        ]),
-      );
-    }
-
-    final domainColor = domain == 'energy'
-        ? const Color(0xFFFBBF24)
-        : domain == 'water'
-            ? const Color(0xFF38BDF8)
-            : const Color(0xFF4ADE80);
-
-    final spots = values.asMap().entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value))
-        .toList();
-
-    // Min/max for chart scaling
-    final minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b) * 0.85;
-    final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) * 1.15;
-
-    return LineChart(LineChartData(
-      minY: minY,
-      maxY: maxY,
-      gridData: FlGridData(
-        show: true,
-        getDrawingHorizontalLine: (_) =>
-            FlLine(color: const Color(0xFF334155), strokeWidth: 0.8),
-        getDrawingVerticalLine: (_) =>
-            FlLine(color: const Color(0xFF1E293B), strokeWidth: 0.8),
-      ),
-      borderData: FlBorderData(show: false),
-      titlesData: FlTitlesData(
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 42,
-            getTitlesWidget: (v, _) => Text(
-              v.toStringAsFixed(1),
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 9),
-            ),
-          ),
-        ),
-        bottomTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-        topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false)),
-      ),
-      lineBarsData: [
-        LineChartBarData(
-          spots: spots,
-          isCurved: true,
-          color: domainColor,
-          barWidth: 2.5,
-          dotData: FlDotData(
-            show: true,
-            getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
-              radius: 3,
-              color: domainColor,
-              strokeWidth: 1.5,
-              strokeColor: Colors.white,
-            ),
-          ),
-          belowBarData: BarAreaData(
-            show: true,
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                domainColor.withOpacity(0.2),
-                domainColor.withOpacity(0.0),
-              ],
-            ),
-          ),
-          dashArray: [6, 4], // dashed = prediction
-        ),
-      ],
-    ));
   }
 }

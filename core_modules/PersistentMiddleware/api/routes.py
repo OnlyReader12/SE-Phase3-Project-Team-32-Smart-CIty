@@ -140,6 +140,7 @@ def get_domain_latest(domain: str, db: Session = Depends(get_db)):
                 "state":           r.state,
                 "health_status":   r.health_status,
                 "protocol_source": r.protocol_source,
+                "location":        r.location_dict(),
                 "payload":         r.payload_dict(),
             }
             for r in records

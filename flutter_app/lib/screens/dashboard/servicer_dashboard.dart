@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../core/api_client.dart';
 import '../../widgets/actuator_toggle.dart';
 import '../../widgets/node_list_tile.dart';
 
@@ -19,22 +20,58 @@ class _ServicerDashboardState extends ConsumerState<ServicerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final dashAsync = ref.watch(servicerDashboardProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Node Health'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(servicerDashboardProvider),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Servicer Console'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Overview'),
+              Tab(text: 'Active Tasks'),
+              Tab(text: 'History'),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authProvider.notifier).logout(),
-          ),
-        ],
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                ref.invalidate(servicerDashboardProvider);
+                ref.invalidate(myAssignmentsProvider);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () => ref.read(authProvider.notifier).logout(),
+            ),
+          ],
+        ),
+        body: const TabBarView(
+          children: [
+            _OverviewTab(),
+            _TasksTab(isActive: true),
+            _TasksTab(isActive: false),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _OverviewTab extends ConsumerStatefulWidget {
+  const _OverviewTab();
+  @override
+  ConsumerState<_OverviewTab> createState() => _OverviewTabState();
+}
+
+class _OverviewTabState extends ConsumerState<_OverviewTab> {
+  Map<String, dynamic>? _selectedNode;
+
+  @override
+  Widget build(BuildContext context) {
+    final dashAsync = ref.watch(servicerDashboardProvider);
+    
+    return Scaffold(
       body: dashAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -44,10 +81,7 @@ class _ServicerDashboardState extends ConsumerState<ServicerDashboard> {
           final summary = data['summary'] as Map<String, dynamic>;
           return Column(
             children: [
-              // ── Health summary bar ──────────────────────────────────────
               _HealthSummaryBar(summary: summary),
-
-              // ── Zone-grouped node grid (map replacement) ────────────────
               Expanded(
                 flex: 3,
                 child: _ZoneNodeGrid(
@@ -55,8 +89,6 @@ class _ServicerDashboardState extends ConsumerState<ServicerDashboard> {
                   onNodeTap: (node) => setState(() => _selectedNode = node),
                 ),
               ),
-
-              // ── Node flat list ───────────────────────────────────────────
               Expanded(
                 flex: 2,
                 child: ListView.builder(
@@ -77,6 +109,102 @@ class _ServicerDashboardState extends ConsumerState<ServicerDashboard> {
               node: _selectedNode!,
               onClose: () => setState(() => _selectedNode = null),
             ),
+    );
+  }
+}
+
+class _TasksTab extends ConsumerWidget {
+  final bool isActive;
+  const _TasksTab({required this.isActive});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final assignmentsAsync = ref.watch(myAssignmentsProvider);
+
+    return assignmentsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red))),
+      data: (allAssignments) {
+        final tasks = allAssignments.where((a) {
+          final isResolved = a['status'] == 'RESOLVED' || a['status'] == 'CLOSED';
+          return isActive ? !isResolved : isResolved;
+        }).toList();
+
+        if (tasks.isEmpty) {
+          return Center(
+            child: Text(isActive ? 'No active tasks!' : 'No service history', 
+              style: const TextStyle(color: Colors.grey)),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: tasks.length,
+          itemBuilder: (_, i) {
+            final t = tasks[i];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: const Color(0xFF1E293B),
+              child: ListTile(
+                title: Text('${t['node_id']} (${t['domain']})', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Zone: ${t['zone_id'] ?? 'Unknown'} | Status: ${t['status']}', style: const TextStyle(color: Colors.white70)),
+                    if (t['notes'] != null) Text('Notes: ${t['notes']}', style: const TextStyle(color: Colors.white54)),
+                  ],
+                ),
+                trailing: isActive ? ElevatedButton(
+                  onPressed: () => _resolveDialog(context, ref, t['id']),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4ADE80)),
+                  child: const Text('Resolve', style: TextStyle(color: Colors.black)),
+                ) : null,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _resolveDialog(BuildContext context, WidgetRef ref, String assignmentId) {
+    final tc = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Resolve Assignment', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: tc,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            labelText: 'Resolution Notes (Required)',
+            labelStyle: TextStyle(color: Colors.white54),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (tc.text.trim().isEmpty) return;
+              try {
+                await ApiClient.instance.put('/servicer/assignments/$assignmentId/resolve', data: {
+                  'status': 'RESOLVED',
+                  'notes': tc.text.trim(),
+                });
+                if (ctx.mounted) Navigator.pop(ctx);
+                ref.invalidate(myAssignmentsProvider);
+              } catch (e) {
+                // Ignore error visual for now, let it pop
+              }
+            },
+            child: const Text('Mark Resolved'),
+          ),
+        ],
+      ),
     );
   }
 }

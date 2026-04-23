@@ -37,10 +37,11 @@ async def _fetch_domain(domain: str) -> list[dict]:
             nodes = []
             for n in data.get("latest", []):
                 payload = n.get("payload") or {}
+                loc = n.get("location") or {}
                 nodes.append({
                     "node_id":   n.get("node_id", ""),
                     "node_type": n.get("node_type", ""),
-                    "zone":      payload.get("zone_id") or payload.get("zone") or "UNKNOWN",
+                    "zone":      loc.get("zone") or loc.get("zone_id") or "UNKNOWN",
                     "domain":    domain,
                     "health":    n.get("health_status", "UNKNOWN"),
                     "state":     n.get("state", "UNKNOWN"),
