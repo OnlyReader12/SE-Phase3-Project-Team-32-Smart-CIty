@@ -632,6 +632,16 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Stakeholder Selection UI -->
+        <div style="margin-bottom: 18px; text-align: right;">
+            <label for="stakeholderSelect" style="font-size:0.95rem; color:var(--text-secondary); margin-right:8px;">View as:</label>
+            <select id="stakeholderSelect" style="padding:6px 12px; border-radius:8px; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border);">
+                <option value="energy">Energy Management Team</option>
+                <option value="ehs">EHS Management Team</option>
+                <option value="researcher">Researcher (Data Scientist)</option>
+                <option value="resident">Resident (End-User)</option>
+            </select>
+        </div>
         <!-- ═══ HEADER ═══ -->
         <header class="header">
             <div class="header-left">
@@ -704,183 +714,79 @@
         }
 
         // ── Build the full dashboard HTML ──
-        function renderDashboard(data) {
+        function renderDashboard(data, stakeholder, roleConfig) {
             if (!data || data.total_nodes === 0) return;
-
-            const score = data.campus_health_score;
-            const circumference = 2 * Math.PI * 65;
-            const offset = circumference - (score / 100) * circumference;
-            const scoreColor = score >= 75 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
 
             let html = '';
 
-            // ── Health Score + Stats ──
-            html += `
-            <div class="health-section">
-                <div class="health-score-card">
-                    <div class="health-score-circle">
-                        <svg width="160" height="160" viewBox="0 0 160 160">
-                            <circle cx="80" cy="80" r="65" class="score-bg"/>
-                            <circle cx="80" cy="80" r="65" class="score-fill"
-                                stroke="${scoreColor}"
-                                stroke-dasharray="${circumference}"
-                                stroke-dashoffset="${offset}"/>
-                        </svg>
-                        <span class="health-score-value" style="color:${scoreColor}">${Math.round(score)}</span>
-                    </div>
-                    <div class="health-score-label">Campus Health Score</div>
-                    <div class="status-pills">
-                        <span class="status-pill pill-safe">
-                            <span class="pill-count">${data.safe_count}</span> SAFE
-                        </span>
-                        <span class="status-pill pill-warn">
-                            <span class="pill-count">${data.warning_count}</span> WARN
-                        </span>
-                        <span class="status-pill pill-crit">
-                            <span class="pill-count">${data.critical_count}</span> CRIT
-                        </span>
-                    </div>
-                </div>
+            // Feature flags based on roleConfig
+            const metrics = roleConfig.widgets.filter(w => [
+                'solar_gen','ac_load','power_consumption','node_availability','device_health','energy_forecast','lamp_post_automation',
+                'aqi','water_ph','noise_db','pm25','uv_index','voc_ppb','turbidity_ntu','sensor_status'
+            ].includes(w));
+            const showCharts = metrics.includes('aqi') || metrics.includes('water_ph');
+            const showSuggestions = roleConfig.widgets.includes('alert_config') || roleConfig.widgets.includes('alerts');
+            const showNodes = roleConfig.widgets.includes('node_availability') || roleConfig.widgets.includes('personal_nodes') || roleConfig.widgets.includes('sensor_status');
+            const showExport = roleConfig.widgets.includes('data_export');
 
-                <div class="status-cards">
-                    <div class="status-summary-card">
-                        <div class="ssc-header">
-                            <div class="ssc-icon" style="background:rgba(59,130,246,0.15)">📡</div>
-                        </div>
-                        <div class="ssc-value" style="color:var(--accent-blue)">${data.total_nodes}</div>
-                        <div class="ssc-label">Active EHS Nodes</div>
-                        <div class="ssc-detail">6 node types · 3 protocols</div>
-                    </div>
-                    <div class="status-summary-card">
-                        <div class="ssc-header">
-                            <div class="ssc-icon" style="background:rgba(16,185,129,0.15)">🛡️</div>
-                        </div>
-                        <div class="ssc-value" style="color:var(--accent-green)">${Object.keys(data.metric_cards).length}</div>
-                        <div class="ssc-label">Metrics Monitored</div>
-                        <div class="ssc-detail">AQI · pH · Noise · PM2.5 · UV · VOC · Turbidity</div>
-                    </div>
-                    <div class="status-summary-card">
-                        <div class="ssc-header">
-                            <div class="ssc-icon" style="background:rgba(139,92,246,0.15)">🤖</div>
-                        </div>
-                        <div class="ssc-value" style="color:var(--accent-purple)">${data.suggestions.length}</div>
-                        <div class="ssc-label">Active Suggestions</div>
-                        <div class="ssc-detail">ML-powered recommendations</div>
-                    </div>
-                    <!-- Extra cards for key stats -->
-                    ${data.metric_cards.aqi ? `
-                    <div class="status-summary-card">
-                        <div class="ssc-header">
-                            <div class="ssc-icon" style="background:rgba(59,130,246,0.15)">💨</div>
-                        </div>
-                        <div class="ssc-value" style="color:${data.metric_cards.aqi.avg >= 150 ? 'var(--accent-red)' : 'var(--accent-cyan)'}">${data.metric_cards.aqi.avg}</div>
-                        <div class="ssc-label">Avg Air Quality Index</div>
-                        <div class="ssc-detail">Max: ${data.metric_cards.aqi.max} · Min: ${data.metric_cards.aqi.min}</div>
-                    </div>` : ''}
-                    ${data.metric_cards.water_ph ? `
-                    <div class="status-summary-card">
-                        <div class="ssc-header">
-                            <div class="ssc-icon" style="background:rgba(34,211,238,0.15)">💧</div>
-                        </div>
-                        <div class="ssc-value" style="color:var(--accent-cyan)">${data.metric_cards.water_ph.avg}</div>
-                        <div class="ssc-label">Avg Water pH</div>
-                        <div class="ssc-detail">Range: ${data.metric_cards.water_ph.min} – ${data.metric_cards.water_ph.max}</div>
-                    </div>` : ''}
-                    ${data.metric_cards.noise_db ? `
-                    <div class="status-summary-card">
-                        <div class="ssc-header">
-                            <div class="ssc-icon" style="background:rgba(245,158,11,0.15)">🔊</div>
-                        </div>
-                        <div class="ssc-value" style="color:${data.metric_cards.noise_db.avg >= 70 ? 'var(--accent-yellow)' : 'var(--accent-green)'}">${data.metric_cards.noise_db.avg}</div>
-                        <div class="ssc-label">Avg Noise Level (dB)</div>
-                        <div class="ssc-detail">Peak: ${data.metric_cards.noise_db.max} dB</div>
-                    </div>` : ''}
-                </div>
-            </div>`;
+            // Status Summary Cards
+            html += `<div class="status-cards">`;
+            html += `<div class="status-summary-card"><div class="ssc-header"><div class="ssc-icon" style="background:rgba(59,130,246,0.15)">📡</div></div><div class="ssc-value" style="color:var(--accent-blue)">${data.total_nodes}</div><div class="ssc-label">Active EHS Nodes</div><div class="ssc-detail">6 node types · 3 protocols</div></div>`;
+            html += `<div class="status-summary-card"><div class="ssc-header"><div class="ssc-icon" style="background:rgba(16,185,129,0.15)">🛡️</div></div><div class="ssc-value" style="color:var(--accent-green)">${metrics.length}</div><div class="ssc-label">Metrics Monitored</div><div class="ssc-detail">${metrics.map(m => m.toUpperCase()).join(' · ')}</div></div>`;
+            if (showSuggestions) {
+                html += `<div class="status-summary-card"><div class="ssc-header"><div class="ssc-icon" style="background:rgba(139,92,246,0.15)">🤖</div></div><div class="ssc-value" style="color:var(--accent-purple)">${data.suggestions.length}</div><div class="ssc-label">Active Suggestions</div><div class="ssc-detail">ML-powered recommendations</div></div>`;
+            }
+            html += `</div>`;
 
-            // ── Metric Cards ──
+            // Metric Cards
             const cards = data.metric_cards;
-            if (Object.keys(cards).length > 0) {
-                html += `<h2 class="section-title"><span class="dot"></span>Live Metric Summary</h2>`;
-                html += `<div class="metric-grid">`;
-                for (const [key, card] of Object.entries(cards)) {
+            const filtered = Object.entries(cards).filter(([key]) => metrics.includes(key));
+            if (filtered.length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Live Metric Summary</h2><div class="metric-grid">`;
+                for (const [key, card] of filtered) {
                     const status = getMetricStatus(key, card.avg);
                     const icon = METRIC_ICONS[key] || '📊';
-                    html += `
-                    <div class="metric-card ${status}">
-                        <div class="mc-icon">${icon}</div>
-                        <div class="mc-label">${card.label}</div>
-                        <div class="mc-value">${card.avg} <span class="mc-unit">${card.unit}</span></div>
-                        <div class="mc-range">Range: ${card.min} – ${card.max}</div>
-                        <div class="mc-nodes">${card.nodes_reporting} nodes reporting</div>
-                    </div>`;
+                    html += `<div class="metric-card ${status}"><div class="mc-icon">${icon}</div><div class="mc-label">${card.label}</div><div class="mc-value">${card.avg} <span class="mc-unit">${card.unit}</span></div><div class="mc-range">Range: ${card.min} – ${card.max}</div><div class="mc-nodes">${card.nodes_reporting} nodes reporting</div></div>`;
                 }
                 html += `</div>`;
             }
 
-            // ── Charts ──
-            html += `
-            <h2 class="section-title"><span class="dot"></span>Trend Analysis</h2>
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <h3>💨 AQI Trend (Last ${Math.min(50, data.total_nodes * 5)} readings)</h3>
-                    <div class="chart-container"><canvas id="aqiChart"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <h3>💧 Water pH Trend</h3>
-                    <div class="chart-container"><canvas id="phChart"></canvas></div>
-                </div>
-            </div>`;
+            // Charts
+            if (showCharts) {
+                html += `<h2 class="section-title"><span class="dot"></span>Trend Analysis</h2><div class="charts-grid"><div class="chart-card"><h3>💨 AQI Trend (Last ${Math.min(50, data.total_nodes * 5)} readings)</h3><div class="chart-container"><canvas id="aqiChart"></canvas></div></div><div class="chart-card"><h3>💧 Water pH Trend</h3><div class="chart-container"><canvas id="phChart"></canvas></div></div></div>`;
+            }
 
-            // ── Suggestions ──
-            if (data.suggestions && data.suggestions.length > 0) {
-                html += `<h2 class="section-title"><span class="dot"></span>Actionable Suggestions</h2>`;
-                html += `<div class="suggestions-section"><div class="suggestion-list">`;
+            // Suggestions
+            if (showSuggestions && data.suggestions && data.suggestions.length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Actionable Suggestions</h2><div class="suggestions-section"><div class="suggestion-list">`;
                 for (const sug of data.suggestions) {
-                    const sevClass = {
-                        EMERGENCY: 'sug-emergency', URGENT: 'sug-urgent',
-                        CAUTION: 'sug-caution', INFO: 'sug-info',
-                    }[sug.severity] || 'sug-info';
-                    html += `
-                    <div class="suggestion-card">
-                        <span class="sug-badge ${sevClass}">${sug.severity}</span>
-                        <div class="sug-content">
-                            <h4>${sug.title}</h4>
-                            <p>${sug.description}</p>
-                            ${sug.affected_nodes.length > 0 ?
-                                `<div class="sug-nodes">Nodes: ${sug.affected_nodes.join(', ')}</div>` : ''}
-                        </div>
-                    </div>`;
+                    const sevClass = {EMERGENCY: 'sug-emergency', URGENT: 'sug-urgent',CAUTION: 'sug-caution', INFO: 'sug-info',}[sug.severity] || 'sug-info';
+                    html += `<div class="suggestion-card"><span class="sug-badge ${sevClass}">${sug.severity}</span><div class="sug-content"><h4>${sug.title}</h4><p>${sug.description}</p>${sug.affected_nodes.length > 0 ? `<div class="sug-nodes">Nodes: ${sug.affected_nodes.join(', ')}</div>` : ''}</div></div>`;
                 }
                 html += `</div></div>`;
             }
 
-            // ── Node Status Grid ──
-            if (data.node_statuses && data.node_statuses.length > 0) {
-                html += `<h2 class="section-title"><span class="dot"></span>Node Status Grid (${data.node_statuses.length} nodes)</h2>`;
-                html += `<div class="node-grid">`;
-                // Sort: critical first, then warning, then safe
-                const sorted = [...data.node_statuses].sort((a, b) => {
-                    const order = { CRITICAL: 0, WARNING: 1, SAFE: 2 };
-                    return (order[a.status] || 3) - (order[b.status] || 3);
-                });
+            // Node Status Grid
+            if (showNodes && data.node_statuses && data.node_statuses.length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Node Status Grid (${data.node_statuses.length} nodes)</h2><div class="node-grid">`;
+                const sorted = [...data.node_statuses].sort((a, b) => {const order = { CRITICAL: 0, WARNING: 1, SAFE: 2 };return (order[a.status] || 3) - (order[b.status] || 3);});
                 for (const node of sorted) {
                     const s = node.status.toLowerCase();
                     const typeLabel = node.node_type.replace(/_/g, ' ');
-                    html += `
-                    <div class="node-tile ${s}">
-                        <div class="nt-id">${node.node_id}</div>
-                        <div class="nt-type">${typeLabel}</div>
-                        <div class="nt-status ${s}">${node.status}</div>
-                    </div>`;
+                    html += `<div class="node-tile ${s}"><div class="nt-id">${node.node_id}</div><div class="nt-type">${typeLabel}</div><div class="nt-status ${s}">${node.status}</div></div>`;
                 }
                 html += `</div>`;
             }
 
+            // Researcher export
+            if (showExport) {
+                html += `<div style="margin:32px 0;text-align:center;"><a href="/export" style="padding:12px 24px; border-radius:8px; background:var(--accent-blue); color:#fff; text-decoration:none; font-weight:700;">Download 30-day Telemetry Data (Anonymized)</a></div>`;
+            }
+
             document.getElementById('dashboardContent').innerHTML = html;
 
-            // ── Render Charts ──
-            renderCharts(data);
+            // Render Charts if visible
+            if (showCharts) renderCharts(data);
         }
 
         // ── Chart.js rendering ──
@@ -986,12 +892,30 @@
         }
 
         // ── Fetch and render ──
+        let currentStakeholder = 'ehs';
+
+        document.getElementById('stakeholderSelect').addEventListener('change', e => {
+            currentStakeholder = e.target.value;
+            fetchDashboardData();
+        });
+
+        // Fetch role config (mocked fetch from local file for now)
+        async function fetchRoleConfig(role) {
+            // In production, fetch from backend API
+            const res = await fetch('/core_modules/roles_config.json');
+            const config = await res.json();
+            return config[role + '_manager'] || config[role] || config['ehs_manager'];
+        }
+
         async function fetchDashboardData() {
             try {
-                const res = await fetch(`${API_BASE}/dashboard-data`);
+                const [res, roleConfig] = await Promise.all([
+                    fetch(`${API_BASE}/dashboard-data`),
+                    fetchRoleConfig(currentStakeholder)
+                ]);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-                renderDashboard(data);
+                renderDashboard(data, currentStakeholder, roleConfig);
 
                 const now = new Date().toLocaleTimeString();
                 document.getElementById('lastRefresh').textContent = `Updated ${now}`;

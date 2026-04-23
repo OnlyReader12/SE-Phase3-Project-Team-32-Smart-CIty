@@ -1,0 +1,18 @@
+{
+  "energy_manager": {
+    "widgets": ["solar_gen", "ac_load", "power_consumption", "node_availability", "device_health", "energy_forecast", "lamp_post_automation"],
+    "permissions": ["dashboard.energy", "config.manage", "metrics.view.energy"]
+  },
+  "ehs_manager": {
+    "widgets": ["aqi", "water_ph", "noise_db", "pm25", "uv_index", "voc_ppb", "turbidity_ntu", "alert_config", "sensor_status"],
+    "permissions": ["dashboard.ehs", "alerts.configure", "metrics.view.ehs"]
+  },
+  "researcher": {
+    "widgets": ["data_export", "advanced_filtering", "api_docs"],
+    "permissions": ["dashboard.research", "metrics.view.energy", "metrics.view.ehs"]
+  },
+  "resident": {
+    "widgets": ["personal_nodes", "alerts", "aqi", "water_ph", "noise_db"],
+    "permissions": ["dashboard.personal", "nodes.manage_own", "metrics.view.basic"]
+  }
+}
