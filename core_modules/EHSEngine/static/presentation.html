@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EHS Engine Presentation Demo</title>
+    <meta name="description" content="A guided presentation demo for the EHS Engine showing the end-to-end internal flow from node discovery to final recommendations.">
+    <style>
+        :root {
+            --bg: #07111f;
+            --panel: rgba(9, 18, 33, 0.88);
+            --panel-2: rgba(14, 24, 42, 0.95);
+            --line: rgba(255, 255, 255, 0.08);
+            --text: #e5eefb;
+            --muted: #92a7c2;
+            --accent: #22c55e;
+            --accent-2: #38bdf8;
+            --warn: #f59e0b;
+            --crit: #ef4444;
+            --shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+            --radius: 22px;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+        body {
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 28%),
+                radial-gradient(circle at top right, rgba(34, 197, 94, 0.14), transparent 30%),
+                linear-gradient(180deg, #07111f 0%, #050b14 100%);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 48px 48px;
+            opacity: 0.22;
+            pointer-events: none;
+        }
+
+        .shell {
+            position: relative;
+            z-index: 1;
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 28px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.3fr 0.7fr;
+            gap: 20px;
+            align-items: stretch;
+            margin-bottom: 22px;
+        }
+
+        .hero-main, .hero-side, .panel {
+            background: linear-gradient(180deg, rgba(16, 25, 43, 0.94), rgba(8, 16, 29, 0.96));
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .hero-main {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 280px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--accent-2);
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 18px rgba(34, 197, 94, 0.7);
+        }
+
+        h1 {
+            margin: 12px 0 14px;
+            font-size: clamp(2rem, 4vw, 4rem);
+            line-height: 0.98;
+            letter-spacing: -0.06em;
+            max-width: 900px;
+        }
+
+        .lede {
+            max-width: 820px;
+            color: var(--muted);
+            font-size: 1.02rem;
+            line-height: 1.65;
+            margin-bottom: 22px;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn {
+            appearance: none;
+            border: 0;
+            border-radius: 999px;
+            padding: 14px 20px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.58; cursor: wait; transform: none; }
+
+        .btn-primary {
+            color: #04111f;
+            background: linear-gradient(135deg, #7dd3fc, #34d399);
+            box-shadow: 0 12px 30px rgba(52, 211, 153, 0.22);
+        }
+
+        .btn-secondary {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--line);
+        }
+
+        .hero-side {
+            padding: 22px;
+            display: grid;
+            gap: 12px;
+            align-content: center;
+        }
+
+        .stat {
+            padding: 16px 18px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+        }
+
+        .stat .label { color: var(--muted); font-size: 0.8rem; margin-bottom: 6px; }
+        .stat .value { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.05em; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .panel { padding: 20px; }
+        .panel h2 {
+            margin: 0 0 14px;
+            font-size: 1.02rem;
+            letter-spacing: -0.03em;
+        }
+
+        .flow {
+            display: grid;
+            gap: 12px;
+        }
+
+        .flow-item {
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .flow-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 900;
+        }
+
+        .flow-badge.done { background: rgba(34, 197, 94, 0.18); color: #86efac; }
+        .flow-badge.active { background: rgba(56, 189, 248, 0.18); color: #7dd3fc; animation: pulse 1.2s infinite; }
+        .flow-badge.wait { background: rgba(245, 158, 11, 0.16); color: #fbbf24; }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        .flow-item h3 {
+            margin: 0 0 4px;
+            font-size: 0.96rem;
+        }
+
+        .flow-item p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.86rem;
+            line-height: 1.5;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .card {
+            padding: 16px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.04);
+            min-height: 120px;
+        }
+
+        .card .caption {
+            color: var(--muted);
+            font-size: 0.78rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .card .big {
+            font-size: 1.45rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            margin-bottom: 8px;
+        }
+
+        .card .small {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+
+        .catalog {
+            display: grid;
+            gap: 12px;
+        }
+
+        .catalog-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .catalog-item .name { font-weight: 800; margin-bottom: 4px; }
+        .catalog-item .meta { color: var(--muted); font-size: 0.84rem; line-height: 1.5; }
+        .protocol { color: #a5f3fc; font-weight: 800; font-size: 0.82rem; white-space: nowrap; }
+
+        .log {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(0, 0, 0, 0.22);
+            font-family: Consolas, "SFMono-Regular", monospace;
+            font-size: 0.85rem;
+            color: #cfe7ff;
+            min-height: 120px;
+            white-space: pre-wrap;
+            line-height: 1.55;
+        }
+
+        .status-line {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .progress {
+            height: 10px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress > span {
+            display: block;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #38bdf8, #34d399);
+            border-radius: inherit;
+            transition: width 0.5s ease;
+        }
+
+        @media (max-width: 1050px) {
+            .hero, .grid { grid-template-columns: 1fr; }
+            .results { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 640px) {
+            .shell { padding: 16px; }
+            .hero-main { padding: 22px; }
+            .panel { padding: 16px; }
+            .actions { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="hero">
+            <div class="hero-main">
+                <div>
+                    <div class="eyebrow">Presentation Mode</div>
+                    <h1>EHS Engine internal flow demo for live presentation</h1>
+                    <p class="lede">
+                        Press Start Demo to run a guided walk-through of the EHS pipeline: discover monitored nodes,
+                        ingest and evaluate telemetry, generate predictions, visualize the campus state, and end with
+                        final suggestions and health score.
+                    </p>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" id="startDemo">Start Demo</button>
+                    <button class="btn btn-secondary" id="resetDemo">Reset View</button>
+                    <a class="btn btn-secondary" href="/dashboard">Open Dashboard</a>
+                </div>
+            </div>
+            <aside class="hero-side">
+                <div class="stat">
+                    <div class="label">Campus Health Score</div>
+                    <div class="value" id="healthScore">--</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Active Node Types</div>
+                    <div class="value" id="nodeTypes">--</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Actionable Suggestions</div>
+                    <div class="value" id="suggestionCount">--</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Refresh Snapshot</div>
+                    <div class="value" id="snapshotLabel">--</div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="grid">
+            <div class="panel">
+                <h2>Internal Flow</h2>
+                <div class="flow" id="flowList"></div>
+                <div class="status-line">
+                    <span id="flowLabel">Idle. Press Start Demo to begin.</span>
+                    <span id="flowPercent">0%</span>
+                </div>
+                <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+                <div class="log" id="logBox">Ready.</div>
+            </div>
+
+            <div class="panel">
+                <h2>Live Results</h2>
+                <div class="results">
+                    <div class="card">
+                        <div class="caption">Prediction</div>
+                        <div class="big" id="predictionValue">--</div>
+                        <div class="small" id="predictionDetail">Waiting for demo to start.</div>
+                    </div>
+                    <div class="card">
+                        <div class="caption">Middleware Catalog</div>
+                        <div class="big" id="catalogCount">--</div>
+                        <div class="small" id="catalogDetail">Node definitions will load from middleware.</div>
+                    </div>
+                    <div class="card">
+                        <div class="caption">Visual Signals</div>
+                        <div class="big" id="visualCards">--</div>
+                        <div class="small" id="visualDetail">AQI, water, noise, weather, soil, and radiation telemetry.</div>
+                    </div>
+                    <div class="card">
+                        <div class="caption">Final Outcome</div>
+                        <div class="big" id="finalOutcome">--</div>
+                        <div class="small" id="finalDetail">The end-state recommendation will appear here.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel" style="margin-top:20px;">
+            <h2>EHS Node Catalog</h2>
+            <div class="catalog" id="catalogList"></div>
+        </section>
+    </div>
+
+    <script>
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        const state = {
+            payload: null,
+            running: false,
+        };
+
+        const flowMeta = [
+            { id: "discover", icon: "1" },
+            { id: "ingest", icon: "2" },
+            { id: "predict", icon: "3" },
+            { id: "visualize", icon: "4" },
+            { id: "suggest", icon: "5" },
+        ];
+
+        function setLog(lines) {
+            document.getElementById('logBox').textContent = lines.join('\n');
+        }
+
+        function renderFlow(flow, activeIndex = -1) {
+            const container = document.getElementById('flowList');
+            container.innerHTML = '';
+            flow.forEach((item, index) => {
+                const badgeClass = index < activeIndex ? 'done' : (index === activeIndex ? 'active' : 'wait');
+                const el = document.createElement('div');
+                el.className = 'flow-item';
+                el.innerHTML = `
+                    <div class="flow-badge ${badgeClass}">${flowMeta[index] ? flowMeta[index].icon : index + 1}</div>
+                    <div>
+                        <h3>${item.title}</h3>
+                        <p>${item.detail || ''}</p>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function renderCatalog(catalog) {
+            const list = document.getElementById('catalogList');
+            list.innerHTML = '';
+            catalog.forEach((node) => {
+                const el = document.createElement('div');
+                el.className = 'catalog-item';
+                el.innerHTML = `
+                    <div>
+                        <div class="name">${node.label}</div>
+                        <div class="meta">
+                            ${node.prefix} · ${node.count} nodes · ${node.parameters.join(', ')}
+                        </div>
+                    </div>
+                    <div class="protocol">${node.protocols.join(' / ')}</div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        function renderFinal(payload) {
+            const engine = payload.engine || {};
+            const catalog = payload.middleware?.catalog?.nodes || [];
+            const nodes = engine.total_nodes || 0;
+            const suggestions = engine.suggestions || [];
+            const prediction = payload.prediction;
+            const snapshot = engine.presentation_snapshot || {};
+
+            document.getElementById('healthScore').textContent = `${engine.campus_health_score ?? '--'}`;
+            document.getElementById('nodeTypes').textContent = `${catalog.length || '--'}`;
+            document.getElementById('suggestionCount').textContent = `${suggestions.length || 0}`;
+            document.getElementById('snapshotLabel').textContent = snapshot.label || '--';
+            document.getElementById('catalogCount').textContent = `${catalog.length}`;
+            document.getElementById('catalogDetail').textContent = `${payload.middleware?.nodes?.total_ehs_nodes || 0} active records in middleware`;
+            document.getElementById('visualCards').textContent = `${engine.metric_cards ? Object.keys(engine.metric_cards).length : 0}`;
+            document.getElementById('visualDetail').textContent = `${nodes} nodes feeding predictions, charts, and suggestions · tick ${snapshot.refresh_tick || '--'}`;
+
+            if (prediction) {
+                const forecast = prediction.aqi_forecast || prediction.water_ph_forecast || prediction.noise_db_forecast || prediction.pm25_forecast;
+                if (forecast) {
+                    document.getElementById('predictionValue').textContent = `${forecast.predicted_value}`;
+                    document.getElementById('predictionDetail').textContent = `Model: ${forecast.model} · Trend: ${forecast.trend} · Confidence: ${Math.round((forecast.confidence || 0) * 100)}%`;
+                } else {
+                    document.getElementById('predictionValue').textContent = 'Ready';
+                    document.getElementById('predictionDetail').textContent = 'Forecast data was not available for the selected node.';
+                }
+            } else {
+                document.getElementById('predictionValue').textContent = 'No forecast';
+                document.getElementById('predictionDetail').textContent = 'The most recent node did not meet the minimum history threshold.';
+            }
+
+            if (engine.suggestions && engine.suggestions.length) {
+                const first = engine.suggestions[0];
+                document.getElementById('finalOutcome').textContent = first.severity;
+                document.getElementById('finalDetail').textContent = first.title;
+            } else {
+                document.getElementById('finalOutcome').textContent = 'All Clear';
+                document.getElementById('finalDetail').textContent = 'No urgent actions are required right now.';
+            }
+        }
+
+        async function runDemo() {
+            if (state.running) return;
+            state.running = true;
+
+            const startBtn = document.getElementById('startDemo');
+            startBtn.disabled = true;
+            document.getElementById('resetDemo').disabled = true;
+
+            const lines = [];
+            const setProgress = (pct) => {
+                document.getElementById('progressBar').style.width = `${pct}%`;
+                document.getElementById('flowPercent').textContent = `${pct}%`;
+            };
+
+            try {
+                lines.push('Connecting to engine and middleware...');
+                setLog(lines);
+                setProgress(8);
+
+                const response = await fetch(`/presentation-data?ts=${Date.now()}`, { cache: 'no-store' });
+                const payload = await response.json();
+                state.payload = payload;
+
+                const flow = payload.flow || [];
+                renderFlow(flow, 0);
+                setProgress(18);
+                document.getElementById('flowLabel').textContent = 'Loaded demo payload.';
+
+                await sleep(700);
+                lines.push(`Discovered ${payload.middleware?.catalog?.total_nodes || 0} nodes from middleware catalog.`);
+                setLog(lines);
+                renderFlow(flow, 1);
+                setProgress(38);
+
+                await sleep(700);
+                lines.push(`Latest campus score: ${payload.engine?.campus_health_score ?? '--'}.`);
+                setLog(lines);
+                renderFlow(flow, 2);
+                setProgress(58);
+
+                await sleep(700);
+                lines.push(`Prepared ${payload.engine?.metric_cards ? Object.keys(payload.engine.metric_cards).length : 0} visualization groups.`);
+                setLog(lines);
+                renderFlow(flow, 3);
+                setProgress(76);
+
+                await sleep(700);
+                lines.push(`Generated ${payload.engine?.suggestions?.length || 0} suggestions for presentation.`);
+                setLog(lines);
+                renderFlow(flow, 4);
+                setProgress(94);
+
+                renderCatalog(payload.middleware?.catalog?.nodes || []);
+                renderFinal(payload);
+
+                lines.push('Demo flow complete. Final results are now on screen.');
+                setLog(lines);
+                setProgress(100);
+                document.getElementById('flowLabel').textContent = 'Demo complete.';
+            } catch (error) {
+                lines.push(`Error: ${error.message}`);
+                setLog(lines);
+                document.getElementById('flowLabel').textContent = 'Demo failed.';
+                document.getElementById('finalOutcome').textContent = 'Error';
+                document.getElementById('finalDetail').textContent = error.message;
+            } finally {
+                startBtn.disabled = false;
+                document.getElementById('resetDemo').disabled = false;
+                state.running = false;
+            }
+        }
+
+        function resetView() {
+            state.payload = null;
+            document.getElementById('flowList').innerHTML = '';
+            document.getElementById('logBox').textContent = 'Ready.';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('flowPercent').textContent = '0%';
+            document.getElementById('flowLabel').textContent = 'Idle. Press Start Demo to begin.';
+            document.getElementById('healthScore').textContent = '--';
+            document.getElementById('nodeTypes').textContent = '--';
+            document.getElementById('suggestionCount').textContent = '--';
+            document.getElementById('predictionValue').textContent = '--';
+            document.getElementById('predictionDetail').textContent = 'Waiting for demo to start.';
+            document.getElementById('catalogCount').textContent = '--';
+            document.getElementById('catalogDetail').textContent = 'Node definitions will load from middleware.';
+            document.getElementById('visualCards').textContent = '--';
+            document.getElementById('finalOutcome').textContent = '--';
+            document.getElementById('finalDetail').textContent = 'The end-state recommendation will appear here.';
+            document.getElementById('catalogList').innerHTML = '';
+            renderFlow([
+                { title: 'Discover Node Catalog', detail: 'Load node types, parameters, and protocols from middleware source of truth.' },
+                { title: 'Ingest Latest Telemetry', detail: 'Fetch engine summary from dashboard data.' },
+                { title: 'Predict Risk Trajectory', detail: 'Use the latest node history to forecast likely conditions.' },
+                { title: 'Render Visualization State', detail: 'Render metric cards and campus-wide heatmap data.' },
+                { title: 'Generate Suggestions', detail: 'Create the final presentation recommendations.' },
+            ]);
+        }
+
+        document.getElementById('startDemo').addEventListener('click', runDemo);
+        document.getElementById('resetDemo').addEventListener('click', resetView);
+        window.addEventListener('load', () => {
+            runDemo();
+        });
+        resetView();
+    </script>
+</body>
+</html>

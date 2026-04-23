@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EHS Engine — Test Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e1a; --card: #1a2035; --border: rgba(255,255,255,0.08);
+            --text: #e2e8f0; --muted: #64748b; --green: #10b981;
+            --red: #ef4444; --yellow: #f59e0b; --blue: #3b82f6; --cyan: #22d3ee;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); padding:32px; }
+        .container { max-width:1100px; margin:0 auto; }
+        h1 { font-size:2rem; font-weight:800;
+             background:linear-gradient(135deg,#e2e8f0,#3b82f6);
+             -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+             margin-bottom:8px; }
+        .subtitle { color:var(--muted); margin-bottom:32px; }
+        .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px; }
+        .stat { background:var(--card); border:1px solid var(--border); border-radius:14px;
+                 padding:24px; text-align:center; }
+        .stat-value { font-size:2.2rem; font-weight:800; margin-bottom:4px; }
+        .stat-label { font-size:0.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+        .results-table { width:100%; border-collapse:collapse; margin-bottom:32px; }
+        .results-table th { text-align:left; padding:12px 16px; font-size:0.75rem;
+             color:var(--muted); text-transform:uppercase; letter-spacing:1px;
+             border-bottom:1px solid var(--border); }
+        .results-table td { padding:14px 16px; border-bottom:1px solid var(--border); font-size:0.88rem; }
+        .results-table tr:hover { background:rgba(59,130,246,0.05); }
+        .badge { padding:4px 10px; border-radius:6px; font-size:0.7rem; font-weight:700; }
+        .badge-pass { background:rgba(16,185,129,0.15); color:var(--green); }
+        .badge-fail { background:rgba(239,68,68,0.15); color:var(--red); }
+        .method { font-family:monospace; font-size:0.75rem; padding:3px 8px;
+                   border-radius:4px; background:rgba(59,130,246,0.1); color:var(--blue); }
+        .endpoint { font-family:monospace; color:var(--cyan); font-size:0.82rem; }
+        .error-text { color:var(--red); font-size:0.78rem; margin-top:4px; }
+        .duration { color:var(--muted); font-size:0.78rem; }
+        .screenshots { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:32px; }
+        .screenshot { border-radius:12px; overflow:hidden; border:1px solid var(--border); }
+        .screenshot img { width:100%; display:block; }
+        .screenshot .caption { padding:10px 14px; font-size:0.78rem; color:var(--muted);
+                                background:var(--card); }
+        .section-title { font-size:1.1rem; font-weight:700; margin:24px 0 16px;
+                          display:flex; align-items:center; gap:8px; }
+        .dot { width:6px; height:6px; border-radius:50%; background:var(--blue); }
+        .footer { text-align:center; padding:24px; color:var(--muted); font-size:0.75rem;
+                   border-top:1px solid var(--border); margin-top:32px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🌿 EHS Engine v2.0 — Test Report</h1>
+    <p class="subtitle">Generated: 2026-04-23 10:31:46 | Smart City Living Lab — Team 32, Member 2 (Saicharan)</p>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-value" style="color:var(--text)">20</div>
+            <div class="stat-label">Total Tests</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color:var(--green)">20</div>
+            <div class="stat-label">Passed</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color:var(--red)">0</div>
+            <div class="stat-label">Failed</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color:var(--green)">100%</div>
+            <div class="stat-label">Pass Rate</div>
+        </div>
+    </div>
+
+    <h2 class="section-title"><span class="dot"></span>Test Results</h2>
+    <table class="results-table">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Test Name</th>
+                <th>Endpoint</th>
+                <th>HTTP</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-AQI-001 (air_quality)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">9ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-AQI-002 (air_quality)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">15ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-AQI-003 (air_quality)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">4ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-WTR-001 (water_quality)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">27ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-WTR-002 (water_quality)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">15ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-NOS-001 (noise_monitor)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">16ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-NOS-002 (noise_monitor)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">22ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-WEA-001 (weather_station)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">3ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-SOL-001 (soil_sensor)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">26ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Evaluate EHS-RAD-001 (radiation_gas)</td>
+                <td><span class="method">POST</span> <span class="endpoint">/evaluate</span></td>
+                <td>200</td>
+                <td class="duration">16ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Health Check</td>
+                <td><span class="method">GET</span> <span class="endpoint">/health</span></td>
+                <td>200</td>
+                <td class="duration">16ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Safety Thresholds</td>
+                <td><span class="method">GET</span> <span class="endpoint">/thresholds</span></td>
+                <td>200</td>
+                <td class="duration">16ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>EHS Suggestions</td>
+                <td><span class="method">GET</span> <span class="endpoint">/suggestions</span></td>
+                <td>200</td>
+                <td class="duration">15ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Predict EHS-AQI-001</td>
+                <td><span class="method">GET</span> <span class="endpoint">/predict/EHS-AQI-001</span></td>
+                <td>200</td>
+                <td class="duration">18ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Predict unfound node</td>
+                <td><span class="method">GET</span> <span class="endpoint">/predict/NONEXISTENT-999</span></td>
+                <td>404</td>
+                <td class="duration">24ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Time-Series (AQI)</td>
+                <td><span class="method">GET</span> <span class="endpoint">/visualize/timeseries?metric=aqi</span></td>
+                <td>200</td>
+                <td class="duration">18ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Time-Series (noise)</td>
+                <td><span class="method">GET</span> <span class="endpoint">/visualize/timeseries?metric=noise_db</span></td>
+                <td>200</td>
+                <td class="duration">15ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Campus Heatmap</td>
+                <td><span class="method">GET</span> <span class="endpoint">/visualize/heatmap</span></td>
+                <td>200</td>
+                <td class="duration">4ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Dashboard Data</td>
+                <td><span class="method">GET</span> <span class="endpoint">/dashboard-data</span></td>
+                <td>200</td>
+                <td class="duration">14ms</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Dashboard HTML</td>
+                <td><span class="method">GET</span> <span class="endpoint">/dashboard</span></td>
+                <td>200</td>
+                <td class="duration">4ms</td>
+            </tr>
+        </tbody>
+    </table>
+    <h2 class="section-title"><span class="dot"></span>Dashboard Screenshots</h2>
+    <div class="screenshots">
+        <div class="screenshot">
+            <img src="screenshots/01_presentation_overview.png" alt="01 Presentation Overview">
+            <div class="caption">01 Presentation Overview</div>
+        </div>
+        <div class="screenshot">
+            <img src="screenshots/02_presentation_midflow.png" alt="02 Presentation Midflow">
+            <div class="caption">02 Presentation Midflow</div>
+        </div>
+        <div class="screenshot">
+            <img src="screenshots/03_presentation_results.png" alt="03 Presentation Results">
+            <div class="caption">03 Presentation Results</div>
+        </div>
+        <div class="screenshot">
+            <img src="screenshots/04_swagger_api.png" alt="04 Swagger Api">
+            <div class="caption">04 Swagger Api</div>
+        </div>
+        <div class="screenshot">
+            <img src="screenshots/05_presentation_return.png" alt="05 Presentation Return">
+            <div class="caption">05 Presentation Return</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        EHS Domain Engine v2.0 | Team 32 — Smart City Living Lab<br>
+        Design Patterns: Strategy (ML) · Observer (AMQP) · Factory Method (Evaluators)<br>
+        Protocols: MQTT · HTTP · CoAP | 6 Node Types · 7+ Metrics · 120 Sensors
+    </div>
+</div>
+</body>
+</html>

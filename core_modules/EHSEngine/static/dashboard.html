@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EHS Campus Dashboard — Smart City Living Lab</title>
+    <meta name="description" content="Real-time Environmental Health & Safety monitoring dashboard for the Smart City Living Lab campus.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        /* ══════════════════════════════════════════
+           DESIGN SYSTEM — Dark Premium Theme
+           ══════════════════════════════════════════ */
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2035;
+            --bg-card-hover: #1f2848;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-glow: rgba(99, 179, 237, 0.25);
+
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+
+            --accent-blue: #3b82f6;
+            --accent-cyan: #22d3ee;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-orange: #f97316;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+
+            --gradient-health: linear-gradient(135deg, #10b981, #22d3ee);
+            --gradient-danger: linear-gradient(135deg, #ef4444, #f97316);
+            --gradient-warn: linear-gradient(135deg, #f59e0b, #f97316);
+            --gradient-card: linear-gradient(145deg, rgba(26, 32, 53, 0.9), rgba(17, 24, 39, 0.95));
+
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 30px rgba(59, 130, 246, 0.1);
+
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background gradient */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.08), transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.06), transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(34, 211, 238, 0.04), transparent 60%);
+            z-index: 0;
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ── LAYOUT ── */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 28px;
+            background: var(--gradient-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow);
+        }
+
+        .header-left h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e2e8f0, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .header-left p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 100px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        .refresh-badge {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .demo-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border-glow);
+            background: rgba(34, 211, 238, 0.08);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.78rem;
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .demo-link:hover {
+            background: rgba(34, 211, 238, 0.14);
+            transform: translateY(-1px);
+        }
+
+        /* ── HEALTH SCORE ── */
+        .health-section {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .health-score-card {
+            background: var(--gradient-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .health-score-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.05), transparent 50%);
+            animation: scoreGlow 4s ease-in-out infinite;
+        }
+
+        @keyframes scoreGlow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .health-score-circle {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 16px;
+        }
+
+        .health-score-circle svg {
+            transform: rotate(-90deg);
+        }
+
+        .health-score-circle .score-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 10;
+        }
+
+        .health-score-circle .score-fill {
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.5s ease, stroke 0.5s ease;
+        }
+
+        .health-score-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: -2px;
+        }
+
+        .health-score-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .status-pills {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border-radius: 100px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .pill-safe { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .pill-warn { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+        .pill-crit { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+
+        .pill-count {
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        /* ── STATUS SUMMARY CARDS ── */
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .status-summary-card {
+            background: var(--gradient-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .status-summary-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .ssc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .ssc-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .ssc-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .ssc-label {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .ssc-detail {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        /* ── METRIC CARDS GRID ── */
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: var(--gradient-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 0 0 10px 10px;
+        }
+
+        .metric-card.safe::after { background: var(--accent-green); }
+        .metric-card.warning::after { background: var(--accent-yellow); }
+        .metric-card.critical::after { background: var(--accent-red); }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--border-glow);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .mc-icon {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .mc-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .mc-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .mc-unit {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .mc-range {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .mc-nodes {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* ── CHARTS SECTION ── */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: var(--gradient-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .chart-card h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 220px;
+        }
+
+        /* ── SUGGESTIONS PANEL ── */
+        .suggestions-section {
+            margin-bottom: 24px;
+        }
+
+        .suggestion-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .suggestion-card {
+            background: var(--gradient-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 18px 22px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .suggestion-card:hover {
+            border-color: var(--border-glow);
+            transform: translateX(4px);
+        }
+
+        .sug-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .sug-emergency { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .sug-urgent { background: rgba(249, 115, 22, 0.2); color: var(--accent-orange); border: 1px solid rgba(249, 115, 22, 0.3); }
+        .sug-caution { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .sug-info { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.3); }
+
+        .sug-content h4 {
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .sug-content p {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .sug-nodes {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* ── NODE STATUS GRID ── */
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .node-tile {
+            background: var(--gradient-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            transition: var(--transition);
+            cursor: default;
+        }
+
+        .node-tile:hover {
+            border-color: var(--border-glow);
+            transform: scale(1.03);
+        }
+
+        .node-tile.safe { border-left: 3px solid var(--accent-green); }
+        .node-tile.warning { border-left: 3px solid var(--accent-yellow); }
+        .node-tile.critical { border-left: 3px solid var(--accent-red); animation: critFlash 2s infinite; }
+
+        @keyframes critFlash {
+            0%, 100% { border-left-color: var(--accent-red); }
+            50% { border-left-color: rgba(239, 68, 68, 0.3); }
+        }
+
+        .nt-id {
+            font-size: 0.72rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            color: var(--text-primary);
+        }
+
+        .nt-type {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .nt-status {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 6px;
+        }
+
+        .nt-status.safe { color: var(--accent-green); }
+        .nt-status.warning { color: var(--accent-yellow); }
+        .nt-status.critical { color: var(--accent-red); }
+
+        /* ── FOOTER ── */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 16px;
+        }
+
+        .footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 0.85rem;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .empty-state code {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-blue);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1024px) {
+            .health-section { grid-template-columns: 1fr; }
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 640px) {
+            .app-container { padding: 12px; }
+            .status-cards { grid-template-columns: 1fr; }
+            .metric-grid { grid-template-columns: 1fr 1fr; }
+            .header { flex-direction: column; gap: 12px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ═══ HEADER ═══ -->
+        <header class="header">
+            <div class="header-left">
+                <h1>🌿 EHS Campus Dashboard</h1>
+                <p>Smart City Living Lab — Environmental Health & Safety Engine v2.0</p>
+            </div>
+            <div class="header-right">
+                <a class="demo-link" href="/presentation">Presentation Demo</a>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+                <span class="refresh-badge" id="lastRefresh">Refreshing...</span>
+            </div>
+        </header>
+
+        <!-- ═══ CONTENT (populated by JS) ═══ -->
+        <div id="dashboardContent">
+            <div class="empty-state">
+                <div class="icon">📡</div>
+                <h3>Waiting for Telemetry Data...</h3>
+                <p>
+                    Send EHS readings via <code>POST /evaluate</code> or start the IoT Generator 
+                    to begin populating the dashboard.
+                </p>
+            </div>
+        </div>
+
+        <!-- ═══ FOOTER ═══ -->
+        <footer class="footer">
+            Team 32 — Smart City Living Lab | Member 2: Saicharan (EHS Engine) |
+            Patterns: Strategy (ML) · Observer (AMQP) · Factory Method (Evaluators) |
+            <a href="/docs">API Docs</a> · <a href="/health">Health Check</a>
+        </footer>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════
+        // EHS Dashboard — Client-Side Logic
+        // ═══════════════════════════════════════════
+
+        const API_BASE = '';
+        let aqiChart = null;
+        let phChart = null;
+
+        // Metric icons mapping
+        const METRIC_ICONS = {
+            aqi: '💨', water_ph: '💧', noise_db: '🔊', pm25: '🫁',
+            uv_index: '☀️', voc_ppb: '☢️', turbidity_ntu: '🌊',
+        };
+
+        const METRIC_COLORS = {
+            aqi: '#3b82f6', water_ph: '#22d3ee', noise_db: '#f59e0b',
+            pm25: '#ef4444', uv_index: '#f97316', voc_ppb: '#8b5cf6',
+            turbidity_ntu: '#ec4899',
+        };
+
+        // ── Determine status CSS class from metric values ──
+        function getMetricStatus(metric, avg) {
+            const thresholds = {
+                aqi: [150, 300], water_ph: null, noise_db: [70, 85],
+                pm25: [35, 150], uv_index: [6, 8], voc_ppb: [500, 2000],
+                turbidity_ntu: [5, 50],
+            };
+            const t = thresholds[metric];
+            if (!t) return 'safe';
+            if (avg >= t[1]) return 'critical';
+            if (avg >= t[0]) return 'warning';
+            return 'safe';
+        }
+
+        // ── Build the full dashboard HTML ──
+        function renderDashboard(data) {
+            if (!data || data.total_nodes === 0) return;
+
+            const score = data.campus_health_score;
+            const circumference = 2 * Math.PI * 65;
+            const offset = circumference - (score / 100) * circumference;
+            const scoreColor = score >= 75 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
+
+            let html = '';
+
+            // ── Health Score + Stats ──
+            html += `
+            <div class="health-section">
+                <div class="health-score-card">
+                    <div class="health-score-circle">
+                        <svg width="160" height="160" viewBox="0 0 160 160">
+                            <circle cx="80" cy="80" r="65" class="score-bg"/>
+                            <circle cx="80" cy="80" r="65" class="score-fill"
+                                stroke="${scoreColor}"
+                                stroke-dasharray="${circumference}"
+                                stroke-dashoffset="${offset}"/>
+                        </svg>
+                        <span class="health-score-value" style="color:${scoreColor}">${Math.round(score)}</span>
+                    </div>
+                    <div class="health-score-label">Campus Health Score</div>
+                    <div class="status-pills">
+                        <span class="status-pill pill-safe">
+                            <span class="pill-count">${data.safe_count}</span> SAFE
+                        </span>
+                        <span class="status-pill pill-warn">
+                            <span class="pill-count">${data.warning_count}</span> WARN
+                        </span>
+                        <span class="status-pill pill-crit">
+                            <span class="pill-count">${data.critical_count}</span> CRIT
+                        </span>
+                    </div>
+                </div>
+
+                <div class="status-cards">
+                    <div class="status-summary-card">
+                        <div class="ssc-header">
+                            <div class="ssc-icon" style="background:rgba(59,130,246,0.15)">📡</div>
+                        </div>
+                        <div class="ssc-value" style="color:var(--accent-blue)">${data.total_nodes}</div>
+                        <div class="ssc-label">Active EHS Nodes</div>
+                        <div class="ssc-detail">6 node types · 3 protocols</div>
+                    </div>
+                    <div class="status-summary-card">
+                        <div class="ssc-header">
+                            <div class="ssc-icon" style="background:rgba(16,185,129,0.15)">🛡️</div>
+                        </div>
+                        <div class="ssc-value" style="color:var(--accent-green)">${Object.keys(data.metric_cards).length}</div>
+                        <div class="ssc-label">Metrics Monitored</div>
+                        <div class="ssc-detail">AQI · pH · Noise · PM2.5 · UV · VOC · Turbidity</div>
+                    </div>
+                    <div class="status-summary-card">
+                        <div class="ssc-header">
+                            <div class="ssc-icon" style="background:rgba(139,92,246,0.15)">🤖</div>
+                        </div>
+                        <div class="ssc-value" style="color:var(--accent-purple)">${data.suggestions.length}</div>
+                        <div class="ssc-label">Active Suggestions</div>
+                        <div class="ssc-detail">ML-powered recommendations</div>
+                    </div>
+                    <!-- Extra cards for key stats -->
+                    ${data.metric_cards.aqi ? `
+                    <div class="status-summary-card">
+                        <div class="ssc-header">
+                            <div class="ssc-icon" style="background:rgba(59,130,246,0.15)">💨</div>
+                        </div>
+                        <div class="ssc-value" style="color:${data.metric_cards.aqi.avg >= 150 ? 'var(--accent-red)' : 'var(--accent-cyan)'}">${data.metric_cards.aqi.avg}</div>
+                        <div class="ssc-label">Avg Air Quality Index</div>
+                        <div class="ssc-detail">Max: ${data.metric_cards.aqi.max} · Min: ${data.metric_cards.aqi.min}</div>
+                    </div>` : ''}
+                    ${data.metric_cards.water_ph ? `
+                    <div class="status-summary-card">
+                        <div class="ssc-header">
+                            <div class="ssc-icon" style="background:rgba(34,211,238,0.15)">💧</div>
+                        </div>
+                        <div class="ssc-value" style="color:var(--accent-cyan)">${data.metric_cards.water_ph.avg}</div>
+                        <div class="ssc-label">Avg Water pH</div>
+                        <div class="ssc-detail">Range: ${data.metric_cards.water_ph.min} – ${data.metric_cards.water_ph.max}</div>
+                    </div>` : ''}
+                    ${data.metric_cards.noise_db ? `
+                    <div class="status-summary-card">
+                        <div class="ssc-header">
+                            <div class="ssc-icon" style="background:rgba(245,158,11,0.15)">🔊</div>
+                        </div>
+                        <div class="ssc-value" style="color:${data.metric_cards.noise_db.avg >= 70 ? 'var(--accent-yellow)' : 'var(--accent-green)'}">${data.metric_cards.noise_db.avg}</div>
+                        <div class="ssc-label">Avg Noise Level (dB)</div>
+                        <div class="ssc-detail">Peak: ${data.metric_cards.noise_db.max} dB</div>
+                    </div>` : ''}
+                </div>
+            </div>`;
+
+            // ── Metric Cards ──
+            const cards = data.metric_cards;
+            if (Object.keys(cards).length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Live Metric Summary</h2>`;
+                html += `<div class="metric-grid">`;
+                for (const [key, card] of Object.entries(cards)) {
+                    const status = getMetricStatus(key, card.avg);
+                    const icon = METRIC_ICONS[key] || '📊';
+                    html += `
+                    <div class="metric-card ${status}">
+                        <div class="mc-icon">${icon}</div>
+                        <div class="mc-label">${card.label}</div>
+                        <div class="mc-value">${card.avg} <span class="mc-unit">${card.unit}</span></div>
+                        <div class="mc-range">Range: ${card.min} – ${card.max}</div>
+                        <div class="mc-nodes">${card.nodes_reporting} nodes reporting</div>
+                    </div>`;
+                }
+                html += `</div>`;
+            }
+
+            // ── Charts ──
+            html += `
+            <h2 class="section-title"><span class="dot"></span>Trend Analysis</h2>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>💨 AQI Trend (Last ${Math.min(50, data.total_nodes * 5)} readings)</h3>
+                    <div class="chart-container"><canvas id="aqiChart"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3>💧 Water pH Trend</h3>
+                    <div class="chart-container"><canvas id="phChart"></canvas></div>
+                </div>
+            </div>`;
+
+            // ── Suggestions ──
+            if (data.suggestions && data.suggestions.length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Actionable Suggestions</h2>`;
+                html += `<div class="suggestions-section"><div class="suggestion-list">`;
+                for (const sug of data.suggestions) {
+                    const sevClass = {
+                        EMERGENCY: 'sug-emergency', URGENT: 'sug-urgent',
+                        CAUTION: 'sug-caution', INFO: 'sug-info',
+                    }[sug.severity] || 'sug-info';
+                    html += `
+                    <div class="suggestion-card">
+                        <span class="sug-badge ${sevClass}">${sug.severity}</span>
+                        <div class="sug-content">
+                            <h4>${sug.title}</h4>
+                            <p>${sug.description}</p>
+                            ${sug.affected_nodes.length > 0 ?
+                                `<div class="sug-nodes">Nodes: ${sug.affected_nodes.join(', ')}</div>` : ''}
+                        </div>
+                    </div>`;
+                }
+                html += `</div></div>`;
+            }
+
+            // ── Node Status Grid ──
+            if (data.node_statuses && data.node_statuses.length > 0) {
+                html += `<h2 class="section-title"><span class="dot"></span>Node Status Grid (${data.node_statuses.length} nodes)</h2>`;
+                html += `<div class="node-grid">`;
+                // Sort: critical first, then warning, then safe
+                const sorted = [...data.node_statuses].sort((a, b) => {
+                    const order = { CRITICAL: 0, WARNING: 1, SAFE: 2 };
+                    return (order[a.status] || 3) - (order[b.status] || 3);
+                });
+                for (const node of sorted) {
+                    const s = node.status.toLowerCase();
+                    const typeLabel = node.node_type.replace(/_/g, ' ');
+                    html += `
+                    <div class="node-tile ${s}">
+                        <div class="nt-id">${node.node_id}</div>
+                        <div class="nt-type">${typeLabel}</div>
+                        <div class="nt-status ${s}">${node.status}</div>
+                    </div>`;
+                }
+                html += `</div>`;
+            }
+
+            document.getElementById('dashboardContent').innerHTML = html;
+
+            // ── Render Charts ──
+            renderCharts(data);
+        }
+
+        // ── Chart.js rendering ──
+        function renderCharts(data) {
+            // Destroy existing charts to prevent canvas reuse errors
+            if (aqiChart) { aqiChart.destroy(); aqiChart = null; }
+            if (phChart) { phChart.destroy(); phChart = null; }
+
+            const chartDefaults = {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 800, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: { display: false },
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: { color: '#64748b', font: { size: 10 } },
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: { color: '#64748b', font: { size: 10 } },
+                    },
+                },
+            };
+
+            // Build datasets from node_statuses
+            const aqiValues = [];
+            const phValues = [];
+            const labels = [];
+
+            if (data.node_statuses) {
+                for (const node of data.node_statuses) {
+                    if (node.last_value && node.last_value.aqi !== undefined) {
+                        labels.push(node.node_id.replace('EHS-', ''));
+                        aqiValues.push(node.last_value.aqi);
+                        phValues.push(node.last_value.water_ph || 7);
+                    }
+                }
+            }
+
+            // AQI Chart
+            const aqiEl = document.getElementById('aqiChart');
+            if (aqiEl && aqiValues.length > 0) {
+                const colors = aqiValues.map(v =>
+                    v >= 300 ? '#ef4444' : v >= 150 ? '#f59e0b' : '#10b981'
+                );
+                aqiChart = new Chart(aqiEl, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: aqiValues,
+                            backgroundColor: colors.map(c => c + '33'),
+                            borderColor: colors,
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                        }],
+                    },
+                    options: {
+                        ...chartDefaults,
+                        plugins: {
+                            ...chartDefaults.plugins,
+                            annotation: {
+                                annotations: {
+                                    warnLine: { type: 'line', yMin: 150, yMax: 150, borderColor: '#f59e0b44', borderWidth: 1 },
+                                    critLine: { type: 'line', yMin: 300, yMax: 300, borderColor: '#ef444444', borderWidth: 1 },
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+
+            // pH Chart
+            const phEl = document.getElementById('phChart');
+            if (phEl && phValues.length > 0) {
+                const phColors = phValues.map(v =>
+                    (v < 5 || v > 9.5) ? '#ef4444' : (v < 6.5 || v > 8.5) ? '#f59e0b' : '#22d3ee'
+                );
+                phChart = new Chart(phEl, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: phValues,
+                            backgroundColor: phColors.map(c => c + '33'),
+                            borderColor: phColors,
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                        }],
+                    },
+                    options: {
+                        ...chartDefaults,
+                        scales: {
+                            ...chartDefaults.scales,
+                            y: { ...chartDefaults.scales.y, min: 0, max: 14 },
+                        },
+                    },
+                });
+            }
+        }
+
+        // ── Fetch and render ──
+        async function fetchDashboardData() {
+            try {
+                const res = await fetch(`${API_BASE}/dashboard-data`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                renderDashboard(data);
+
+                const now = new Date().toLocaleTimeString();
+                document.getElementById('lastRefresh').textContent = `Updated ${now}`;
+            } catch (err) {
+                console.warn('[Dashboard] Fetch error:', err.message);
+                document.getElementById('lastRefresh').textContent = 'Connection lost...';
+            }
+        }
+
+        // ── Auto-refresh every 5 seconds ──
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 5000);
+    </script>
+</body>
+</html>
