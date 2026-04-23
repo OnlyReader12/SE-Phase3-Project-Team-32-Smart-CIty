@@ -284,27 +284,31 @@ def main():
     infra_nodes=13*args.nodes_per_type
     res_nodes=len(RESIDENT_FLEET)
     total=infra_nodes+res_nodes
-    ip=find_port(); gp=find_port()
-    INGEST=f"http://127.0.0.1:{ip}"; GATEWAY=f"http://127.0.0.1:{gp}"
+    ip=find_port(); gp=find_port(); ap_port=find_port()
+    INGEST=f"http://127.0.0.1:{ip}"; GATEWAY=f"http://127.0.0.1:{gp}"; ALERT_MGR=f"http://127.0.0.1:{ap_port}"
 
     print(f"\n{C.CY}{'═'*72}{C.END}")
-    print(f"  {C.BOLD}🏛️  Smart City Gateway — Live IoT Stream v3 (SQL){C.END}")
-    print(f"  {C.DIM}Two-Service Architecture | SQLite DB | {total} nodes | Health Metadata{C.END}")
+    print(f"  {C.BOLD}🏛️  Smart City Gateway — Live IoT Stream v4{C.END}")
+    print(f"  {C.DIM}3-Service Architecture | SQLite DB | {total} nodes | Alerts | HLD{C.END}")
     print(f"{C.CY}{'═'*72}{C.END}\n")
-    print(f"  Ingestion: {C.B}{INGEST}{C.END} (stores data)")
-    print(f"  Gateway:   {C.B}{GATEWAY}{C.END} (dashboard + auth + control panel)")
-    print(f"  Nodes:     {C.BOLD}{total}{C.END} ({infra_nodes} infrastructure + {res_nodes} resident)")
-    print(f"  Interval:  {C.BOLD}{args.interval:.1f}s{C.END} (adjustable via control panel)")
-    print(f"\n  Starting services...")
+    print(f"  Ingestion:    {C.B}{INGEST}{C.END} (store + emergency detect)")
+    print(f"  Gateway:      {C.B}{GATEWAY}{C.END} (dashboard + auth + RBAC)")
+    print(f"  Alert Manager:{C.B}{ALERT_MGR}{C.END} (alert dispatch + email)")
+    print(f"  Nodes:        {C.BOLD}{total}{C.END} ({infra_nodes} infra + {res_nodes} resident)")
+    print(f"  Interval:     {C.BOLD}{args.interval:.1f}s{C.END}")
+    print(f"\n  Starting 3 services...")
 
-    env_i={**os.environ,"INGESTION_SERVICE_PORT":str(ip)}
-    env_g={**os.environ,"GATEWAY_SERVICE_PORT":str(gp),"INGESTION_URL":INGEST}
+    env_a={**os.environ,"ALERT_MANAGER_PORT":str(ap_port)}
+    env_i={**os.environ,"INGESTION_SERVICE_PORT":str(ip),"ALERT_MANAGER_URL":ALERT_MGR}
+    env_g={**os.environ,"GATEWAY_SERVICE_PORT":str(gp),"INGESTION_URL":INGEST,"ALERT_MANAGER_URL":ALERT_MGR}
+    pa=subprocess.Popen([sys.executable,"../AlertManagement/alert_manager.py"],cwd=SCRIPT_DIR,env=env_a,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     pi=subprocess.Popen([sys.executable,"ingestion_service.py"],cwd=SCRIPT_DIR,env=env_i,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     pg=subprocess.Popen([sys.executable,"gateway_service.py"],cwd=SCRIPT_DIR,env=env_g,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+    threading.Thread(target=lambda:[None for _ in iter(pa.stdout.readline,"")],daemon=True).start()
     threading.Thread(target=lambda:[None for _ in iter(pi.stdout.readline,"")],daemon=True).start()
     threading.Thread(target=lambda:[None for _ in iter(pg.stdout.readline,"")],daemon=True).start()
 
-    for name,url in [("Ingestion",INGEST),("Gateway",GATEWAY)]:
+    for name,url in [("Alert Manager",ALERT_MGR),("Ingestion",INGEST),("Gateway",GATEWAY)]:
         dl=time.time()+20
         while time.time()<dl:
             try:
@@ -312,12 +316,13 @@ def main():
             except: pass
             time.sleep(1)
         else:
-            print(f"  {C.R}[FAIL] {name} didn't start{C.END}"); pi.terminate(); pg.terminate(); return
-    print(f"  {C.G}[OK] Both services healthy!{C.END}\n")
+            print(f"  {C.R}[FAIL] {name} didn't start{C.END}"); pa.terminate(); pi.terminate(); pg.terminate(); return
+    print(f"  {C.G}[OK] All 3 services healthy!{C.END}\n")
 
     print(f"  {C.BOLD}Endpoints:{C.END}")
     print(f"    Dashboard:     {C.CY}{GATEWAY}/dashboard{C.END}")
     print(f"    Control Panel: {C.CY}{GATEWAY}/control-panel{C.END}")
+    print(f"    HLD Monitor:   {C.CY}{GATEWAY}/hld-architecture{C.END}")
     print(f"    Swagger:       {C.CY}{GATEWAY}/docs{C.END}  |  {C.CY}{INGEST}/docs{C.END}")
     print()
 
@@ -342,8 +347,8 @@ def main():
             print(f"    🏠 {res_name}: ",end="")
         print(f"{icon}{nid}",end="  ")
         if i%5==4: print()
-    print(f"\n  {C.Y}Streaming → Ingestion Service → SQLite DB... Ctrl+C to stop.{C.END}")
-    print(f"  {C.DIM}(Health metadata: 🔋 battery | F=fault_code | Every node){C.END}")
+    print(f"\n  {C.Y}Streaming → Ingestion → SQLite + Alerts... Ctrl+C to stop.{C.END}")
+    print(f"  {C.DIM}(Health: 🔋 battery | F=fault | Emergency alerts → Alert Manager){C.END}")
     print(f"  {'─'*72}")
 
     stop=threading.Event(); lock=threading.Lock(); stats={"sent":0,"crit":0,"err":0}
@@ -354,7 +359,6 @@ def main():
         threads.append(t)
     for t in threads: t.start(); time.sleep(.04)
 
-    # Control poller
     ctrl_t = threading.Thread(target=poll_controls, args=(INGEST, stop, lock, fleet_ref, INGEST), daemon=True)
     ctrl_t.start()
 
@@ -370,9 +374,10 @@ def main():
     finally:
         stop.set()
         for t in threads: t.join(timeout=1)
-        pi.terminate(); pg.terminate()
-        try: pi.wait(timeout=3); pg.wait(timeout=3)
+        pa.terminate(); pi.terminate(); pg.terminate()
+        try: pa.wait(timeout=3); pi.wait(timeout=3); pg.wait(timeout=3)
         except: pass
         print(f"  {C.G}Done. {stats['sent']} readings stored in SQLite.{C.END}\n")
 
 if __name__=="__main__": main()
+

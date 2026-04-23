@@ -1,2 +1,6 @@
 .*venv/
 core_modules/AccessManagementService/data/alerts.jsonl
+core_modules/AccessManagementService/.env
+*.db
+*.db-wal
+*.db-shm

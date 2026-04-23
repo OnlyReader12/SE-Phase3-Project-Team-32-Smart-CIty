@@ -1,13 +1,10 @@
 """
-ingestion_service.py — Microservice 1: Data Ingestion (Store) v3
+ingestion_service.py — Microservice 1: Data Ingestion (Store) v4
 
 Port: 8006
 
-Receives telemetry from ALL IoT generators and stores in normalized SQLite.
-Auto-registers unknown nodes on first contact.
-
-v3: Engine health, system metrics (CPU/memory/workers), dynamic node add/remove,
-    data rate control, HLD architecture stats.
+Receives telemetry from IoT generators & stores in SQLite.
+v4: Emergency alert detection, HLD CPU simulation, user-level node management.
 """
 
 import json, os, sys, time, resource, threading
@@ -26,15 +23,28 @@ from pydantic import BaseModel, Field
 from database.connection import DatabaseManager
 from database.seed import seed_database
 
+# Load .env
+def _load_env():
+    env_path = os.path.join(_BASE_DIR, "..", "AlertManagement", ".env")
+    if os.path.exists(env_path):
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+_load_env()
+
 SERVER_PORT = int(os.getenv("INGESTION_SERVICE_PORT", "8006"))
 WORKER_ID = os.getenv("WORKER_ID", "w0")
+ALERT_MGR_URL = os.getenv("ALERT_MANAGER_URL", "http://127.0.0.1:8008")
 
 db = DatabaseManager(os.path.join(_BASE_DIR, "smartcity.db"))
 
 app = FastAPI(
     title="Smart City Data Ingestion Service",
-    description="Microservice 1: Stores IoT telemetry + Engine Health + System Metrics",
-    version="3.0.0",
+    description="Microservice 1: IoT data → SQLite + Emergency Detection + HLD Sim",
+    version="4.0.0",
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -51,13 +61,28 @@ ENGINE = {
 }
 
 # ═══════════════════════════════════════════
+# HLD CPU Simulation
+# ═══════════════════════════════════════════
+HLD = {
+    "cpu_count": int(os.getenv("HLD_INITIAL_CPU_COUNT", "4")),
+    "cpu_warning_pct": int(os.getenv("HLD_CPU_WARNING_PCT", "70")),
+    "cpu_critical_pct": int(os.getenv("HLD_CPU_CRITICAL_PCT", "85")),
+    "scale_history": [],
+    "cpu_alert_sent": False,
+}
+
+# ═══════════════════════════════════════════
 # Control State
 # ═══════════════════════════════════════════
-CONTROL = {
-    "interval": 1.5,
-}
+CONTROL = {"interval": 1.5}
 PENDING_NODES = []
 REMOVED_NODES = set()
+
+# ═══════════════════════════════════════════
+# Alert Dedup (don't spam same alert)
+# ═══════════════════════════════════════════
+_ALERT_COOLDOWN = {}  # node_id:alert_type → last_sent_time
+ALERT_COOLDOWN_SECS = 60  # same alert refire cooldown
 
 
 @app.on_event("startup")
@@ -71,7 +96,7 @@ async def startup():
     nodes = db.fetchone("SELECT COUNT(*) as c FROM nodes")
     ENGINE["ingest_count"] = total["c"]
     print(f"[DB] Telemetry: {total['c']} records | Nodes: {nodes['c']} registered")
-    print(f"[ENGINE] Worker {WORKER_ID} started on port {SERVER_PORT}")
+    print(f"[ENGINE] Worker {WORKER_ID} on port {SERVER_PORT} | Alert Manager: {ALERT_MGR_URL}")
 
 
 # ═══════════════════════════════════════════
@@ -93,6 +118,7 @@ class AddNodePayload(BaseModel):
     domain: str
     node_type: str
     location: str = "Dynamic"
+    user_id: Optional[int] = None
 
 class RemoveNodePayload(BaseModel):
     node_id: str
@@ -105,6 +131,9 @@ class AddBulkNodesPayload(BaseModel):
     domain: str = "energy"
     node_type: str = "solar_panel"
     prefix: str = "DYN"
+
+class ScaleCPUPayload(BaseModel):
+    new_count: int = Field(ge=1, le=32)
 
 
 # ═══════════════════════════════════════════
@@ -137,15 +166,95 @@ def _ensure_node_registered(node_id_str, domain_name, type_name):
 
 
 # ═══════════════════════════════════════════
+# Emergency Detection
+# ═══════════════════════════════════════════
+
+def _check_emergency(node_id, domain, node_type, data):
+    """Check telemetry for emergency conditions and fire alerts."""
+    alerts = []
+
+    # EHS alerts
+    if node_type == "air_quality":
+        aqi = data.get("aqi", 0)
+        if aqi > 200:
+            alerts.append(("EMERGENCY", "aqi_critical", f"AQI={aqi} (>200) — hazardous air quality"))
+        elif aqi > 100:
+            alerts.append(("WARNING", "aqi_high", f"AQI={aqi} (>100) — unhealthy air quality"))
+
+    if node_type == "water_quality":
+        ph = data.get("water_ph", 7.0)
+        if ph < 5.0 or ph > 9.0:
+            alerts.append(("WARNING", "ph_abnormal", f"Water pH={ph} — outside safe range (5-9)"))
+
+    if node_type == "noise_monitor":
+        db_level = data.get("noise_db", 0)
+        if db_level > 65:
+            alerts.append(("WARNING", "noise_high", f"Noise={db_level}dB (>65) — exceeds safe level"))
+
+    if node_type == "radiation_gas":
+        co = data.get("co_ppm", 0)
+        if co > 8:
+            alerts.append(("EMERGENCY", "co_hazard", f"CO={co}ppm (>8) — carbon monoxide hazard"))
+
+    # Energy alerts
+    if node_type == "battery_storage":
+        soc = data.get("battery_soc_pct", 100)
+        if soc < 10:
+            alerts.append(("EMERGENCY", "battery_critical", f"Battery SOC={soc}% (<10%) — critically low"))
+
+    if node_type == "grid_transformer":
+        load = data.get("grid_load_pct", 0)
+        temp = data.get("grid_temperature_c", 0)
+        if load > 95:
+            alerts.append(("EMERGENCY", "grid_overload", f"Grid load={load}% (>95%) — overload risk"))
+        if temp > 90:
+            alerts.append(("EMERGENCY", "grid_overheat", f"Grid temp={temp}°C (>90°C) — overheating"))
+
+    if node_type == "water_meter":
+        if data.get("leak_detected", False):
+            alerts.append(("EMERGENCY", "water_leak", "Water leak detected!"))
+
+    # Fire alerts
+    for severity, alert_type, message in alerts:
+        _fire_alert(node_id, domain, severity, alert_type, message, data)
+
+
+def _fire_alert(node_id, domain, severity, alert_type, message, data):
+    """Send alert to Alert Manager (with dedup cooldown)."""
+    key = f"{node_id}:{alert_type}"
+    now = time.time()
+    if key in _ALERT_COOLDOWN and (now - _ALERT_COOLDOWN[key]) < ALERT_COOLDOWN_SECS:
+        return  # cooldown active
+    _ALERT_COOLDOWN[key] = now
+
+    # Store in alerts table
+    try:
+        db.execute(
+            "INSERT INTO alerts (node_id, severity, alert_type, message, domain, data_json, created_at, status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, 'active')",
+            (node_id, severity, alert_type, message, domain, json.dumps(data), datetime.now().isoformat())
+        )
+    except:
+        pass  # alerts table might not have all columns yet
+
+    # POST to Alert Manager
+    try:
+        import requests
+        requests.post(f"{ALERT_MGR_URL}/alert", json={
+            "node_id": node_id, "domain": domain, "severity": severity,
+            "alert_type": alert_type, "message": message, "data": data,
+        }, timeout=3)
+    except:
+        pass  # Alert Manager might not be running
+
+
+# ═══════════════════════════════════════════
 # Routes: Info & Health
 # ═══════════════════════════════════════════
 
 @app.get("/", tags=["info"])
 def root():
-    return {
-        "service": "Smart City Data Ingestion Service", "version": "3.0.0",
-        "port": SERVER_PORT, "worker": WORKER_ID,
-    }
+    return {"service": "Smart City Data Ingestion Service", "version": "4.0.0", "port": SERVER_PORT, "worker": WORKER_ID}
 
 @app.get("/health", tags=["info"])
 def health():
@@ -181,6 +290,10 @@ def ingest(payload: TelemetryPayload):
         )
         ENGINE["ingest_count"] += 1
         ENGINE["last_100_latencies_ms"].append((time.time() - t0) * 1000)
+
+        # Emergency detection
+        _check_emergency(payload.node_id, payload.domain, payload.node_type, payload.data)
+
         return {"status": "stored", "node_id": payload.node_id, "domain": payload.domain, "is_critical": bool(is_critical)}
     except Exception as e:
         ENGINE["ingest_errors"] += 1
@@ -206,48 +319,63 @@ def ingest_batch(batch: BatchPayload):
             if is_crit: critical += 1
             ENGINE["ingest_count"] += 1
             ENGINE["last_100_latencies_ms"].append((time.time() - t0) * 1000)
+            _check_emergency(payload.node_id, payload.domain, payload.node_type, payload.data)
         except:
             ENGINE["ingest_errors"] += 1
     return {"status": "batch_stored", "stored": stored, "critical": critical}
 
 
 # ═══════════════════════════════════════════
-# Routes: Engine Health & System Metrics
+# Routes: Engine Health & System Metrics (HLD)
 # ═══════════════════════════════════════════
 
 def _get_system_metrics():
-    """Collect real CPU/memory/system metrics."""
-    cpu_count = os.cpu_count() or 1
-    load_avg = list(os.getloadavg())  # 1min, 5min, 15min
-    cpu_usage_pct = round(load_avg[0] / cpu_count * 100, 1)
+    """Collect simulated HLD CPU + real memory metrics."""
+    # Simulated CPU based on node count and HLD config
+    active_nodes_row = db.fetchone("SELECT COUNT(*) as c FROM nodes WHERE is_active = 1")
+    active_nodes = active_nodes_row["c"] if active_nodes_row else 0
+    uptime = time.time() - (ENGINE["start_time"] or time.time())
+    rps = ENGINE["ingest_count"] / max(1, uptime)
 
-    # Process memory
+    # Simulated CPU usage: more nodes + higher RPS → higher CPU
+    cpu_count = HLD["cpu_count"]
+    raw_load = (active_nodes * 1.5) + (rps * 0.3)
+    cpu_usage_pct = round(min(100, raw_load / (cpu_count / 4) ), 1)
+
+    # Real memory
     try:
         ru = resource.getrusage(resource.RUSAGE_SELF)
-        mem_mb = round(ru.ru_maxrss / (1024 * 1024), 1)  # macOS reports bytes
+        mem_mb = round(ru.ru_maxrss / (1024 * 1024), 1)
     except:
         mem_mb = 0
 
-    # DB file size
     db_path = os.path.join(_BASE_DIR, "smartcity.db")
     db_size_mb = round(os.path.getsize(db_path) / (1024*1024), 2) if os.path.exists(db_path) else 0
-
-    # Thread count
     thread_count = threading.active_count()
 
-    # PID
-    pid = os.getpid()
+    # CPU auto-alert
+    status = "NORMAL"
+    if cpu_usage_pct >= HLD["cpu_critical_pct"]:
+        status = "CRITICAL"
+        if not HLD["cpu_alert_sent"]:
+            HLD["cpu_alert_sent"] = True
+            _fire_alert("SYSTEM", "system", "EMERGENCY", "cpu_overload",
+                        f"CPU usage {cpu_usage_pct}% (>{HLD['cpu_critical_pct']}%) — scale up needed!", {})
+    elif cpu_usage_pct >= HLD["cpu_warning_pct"]:
+        status = "WARNING"
+        HLD["cpu_alert_sent"] = False
+    else:
+        HLD["cpu_alert_sent"] = False
 
     return {
         "cpu_count": cpu_count,
-        "cpu_usage_pct": min(100, cpu_usage_pct),
-        "load_avg_1m": round(load_avg[0], 2),
-        "load_avg_5m": round(load_avg[1], 2),
-        "load_avg_15m": round(load_avg[2], 2),
+        "cpu_usage_pct": cpu_usage_pct,
+        "cpu_status": status,
         "memory_mb": mem_mb,
         "thread_count": thread_count,
         "db_size_mb": db_size_mb,
-        "pid": pid,
+        "pid": os.getpid(),
+        "active_nodes": active_nodes,
     }
 
 
@@ -259,7 +387,6 @@ def engine_health():
     avg_lat = sum(lats) / len(lats) if lats else 0
     max_lat = max(lats) if lats else 0
     sys_metrics = _get_system_metrics()
-    nodes = db.fetchone("SELECT COUNT(*) as c FROM nodes WHERE is_active = 1")
 
     return {
         "worker_id": WORKER_ID,
@@ -269,8 +396,14 @@ def engine_health():
         "records_per_second": round(rps, 2),
         "avg_latency_ms": round(avg_lat, 2),
         "max_latency_ms": round(max_lat, 2),
-        "active_nodes": nodes["c"],
+        "active_nodes": sys_metrics["active_nodes"],
         "system": sys_metrics,
+        "hld": {
+            "cpu_count": HLD["cpu_count"],
+            "cpu_warning_pct": HLD["cpu_warning_pct"],
+            "cpu_critical_pct": HLD["cpu_critical_pct"],
+            "scale_history": HLD["scale_history"][-10:],
+        },
         "interval": CONTROL["interval"],
         "timestamp": datetime.now().isoformat(),
     }
@@ -315,6 +448,24 @@ def engine_report():
 
 
 # ═══════════════════════════════════════════
+# Routes: HLD Scaling
+# ═══════════════════════════════════════════
+
+@app.post("/hld/scale-cpu", tags=["hld"])
+def scale_cpu(payload: ScaleCPUPayload):
+    old = HLD["cpu_count"]
+    HLD["cpu_count"] = payload.new_count
+    HLD["cpu_alert_sent"] = False
+    decision = {
+        "action": "SCALE_CPU",
+        "old": old, "new": payload.new_count,
+        "time": datetime.now().isoformat(),
+    }
+    HLD["scale_history"].append(decision)
+    return {"status": "scaled", "old_cpu": old, "new_cpu": payload.new_count}
+
+
+# ═══════════════════════════════════════════
 # Routes: Node & Data Rate Control
 # ═══════════════════════════════════════════
 
@@ -331,15 +482,21 @@ def set_interval(payload: IntervalPayload):
 @app.post("/control/add-node", tags=["control"])
 def add_node(payload: AddNodePayload):
     _ensure_node_registered(payload.node_id, payload.domain, payload.node_type)
+    # Map to user if provided
+    if payload.user_id:
+        try:
+            db.execute("INSERT OR IGNORE INTO user_nodes (user_id, node_id_str) VALUES (?, ?)",
+                       (payload.user_id, payload.node_id))
+        except:
+            pass
     PENDING_NODES.append({
         "node_id": payload.node_id, "domain": payload.domain,
         "node_type": payload.node_type, "added_at": datetime.now().isoformat(),
     })
-    return {"status": "added", "node_id": payload.node_id, "note": "Node will start streaming shortly"}
+    return {"status": "added", "node_id": payload.node_id}
 
 @app.post("/control/add-bulk-nodes", tags=["control"])
 def add_bulk_nodes(payload: AddBulkNodesPayload):
-    """Add multiple nodes at once for load testing."""
     import random
     added = []
     for i in range(payload.count):
@@ -409,6 +566,6 @@ def fleet_status():
 
 if __name__ == "__main__":
     print(f"\n{'='*60}")
-    print(f"  Data Ingestion Service v3 — Port {SERVER_PORT} — Worker {WORKER_ID}")
+    print(f"  Data Ingestion Service v4 — Port {SERVER_PORT} — Worker {WORKER_ID}")
     print(f"{'='*60}\n")
     uvicorn.run(app, host="0.0.0.0", port=SERVER_PORT)

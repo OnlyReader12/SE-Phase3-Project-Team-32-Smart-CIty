@@ -540,17 +540,114 @@ def list_roles():
 def get_alerts(authorization: Optional[str] = Header(None), severity: Optional[str] = Query(None), limit: int = Query(50)):
     user = _extract_user(authorization)
     _require(user, "alerts.read")
-    conditions, params = [], []
-    allowed = get_allowed_domains(db, user["role_name"])
-    if allowed:
-        conditions.append(f"domain_name IN ({','.join('?' * len(allowed))})")
-        params.extend(allowed)
-    if severity:
-        conditions.append("severity = ?"); params.append(severity)
-    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-    params.append(limit)
-    alerts = db.fetchall(f"SELECT * FROM alerts {where} ORDER BY created_at DESC LIMIT ?", tuple(params))
-    return {"count": len(alerts), "alerts": alerts, "note": "Alerts integration pending — Member 4"}
+    # Try alert_log table (from Alert Manager) first
+    try:
+        conditions, params = [], []
+        allowed = get_allowed_domains(db, user["role_name"])
+        if allowed:
+            conditions.append(f"domain IN ({','.join('?' * len(allowed))})")
+            params.extend(allowed)
+        if severity:
+            conditions.append("severity = ?"); params.append(severity)
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.append(limit)
+        alerts = db.fetchall(f"SELECT * FROM alert_log {where} ORDER BY id DESC LIMIT ?", tuple(params))
+        return {"count": len(alerts), "alerts": alerts}
+    except:
+        # Fallback to old alerts table
+        alerts = db.fetchall("SELECT * FROM alerts ORDER BY created_at DESC LIMIT ?", (limit,))
+        return {"count": len(alerts), "alerts": alerts, "note": "Using legacy alerts table"}
+
+
+def _get_recent_alerts(user, allowed):
+    """Get recent alerts for dashboard display."""
+    try:
+        conditions, params = [], []
+        if allowed:
+            conditions.append(f"domain IN ({','.join('?' * len(allowed))})")
+            params.extend(allowed)
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        rows = db.fetchall(f"SELECT * FROM alert_log {where} ORDER BY id DESC LIMIT 10", tuple(params))
+        return rows
+    except:
+        return []
+
+
+# ═══════════════════════════════════════════
+# Routes: User Node Management
+# ═══════════════════════════════════════════
+
+@app.get("/api/v1/my-nodes", tags=["nodes"])
+def get_my_nodes(authorization: Optional[str] = Header(None)):
+    """List the logged-in user's own IoT nodes."""
+    user = _extract_user(authorization)
+    my_nodes = _get_user_nodes(user["id"])
+    result = []
+    for nid in my_nodes:
+        latest = db.fetchone(
+            "SELECT data_json, is_critical, timestamp FROM telemetry_readings WHERE node_id_str = ? ORDER BY timestamp DESC LIMIT 1",
+            (nid,)
+        )
+        info = {"node_id": nid, "data": {}, "is_critical": False}
+        if latest:
+            info["data"] = json.loads(latest["data_json"])
+            info["is_critical"] = bool(latest["is_critical"])
+            info["last_reading_at"] = latest["timestamp"]
+        # Get node type
+        node_row = db.fetchone("""
+            SELECT nt.type_name, nt.label as type_label, d.name as domain
+            FROM nodes n JOIN node_types nt ON n.node_type_id = nt.id JOIN domains d ON nt.domain_id = d.id
+            WHERE n.node_id = ?
+        """, (nid,))
+        if node_row:
+            info.update(dict(node_row))
+        result.append(info)
+    return {"count": len(result), "nodes": result}
+
+
+class UserAddNodeReq(BaseModel):
+    node_id: str
+    domain: str = "energy"
+    node_type: str = "solar_panel"
+
+class UserRemoveNodeReq(BaseModel):
+    node_id: str
+
+
+@app.post("/api/v1/my-nodes/add", tags=["nodes"])
+def add_my_node(req: UserAddNodeReq, authorization: Optional[str] = Header(None)):
+    """Add a new IoT node owned by the logged-in user."""
+    user = _extract_user(authorization)
+    # Register the node
+    result = _proxy_ingestion("/control/add-node", "POST", {
+        "node_id": req.node_id, "domain": req.domain, "node_type": req.node_type,
+        "user_id": user["id"],
+    })
+    # Map to user
+    try:
+        db.execute("INSERT OR IGNORE INTO user_nodes (user_id, node_id_str) VALUES (?, ?)",
+                   (user["id"], req.node_id))
+    except:
+        pass
+    return {"status": "added", "node_id": req.node_id, "owner": user["username"]}
+
+
+@app.post("/api/v1/my-nodes/remove", tags=["nodes"])
+def remove_my_node(req: UserRemoveNodeReq, authorization: Optional[str] = Header(None)):
+    """Remove an IoT node owned by the logged-in user."""
+    user = _extract_user(authorization)
+    # Check ownership
+    my_nodes = _get_user_nodes(user["id"])
+    if req.node_id not in my_nodes and user["role_name"] != "admin":
+        raise HTTPException(403, "You can only remove your own nodes")
+    # Deactivate
+    _proxy_ingestion("/control/remove-node", "POST", {"node_id": req.node_id})
+    # Remove mapping
+    try:
+        db.execute("DELETE FROM user_nodes WHERE user_id = ? AND node_id_str = ?", (user["id"], req.node_id))
+    except:
+        pass
+    return {"status": "removed", "node_id": req.node_id}
 
 
 # ═══════════════════════════════════════════
@@ -587,7 +684,8 @@ def dashboard_data(authorization: Optional[str] = Header(None)):
         ph = ",".join("?" * len(allowed))
         conditions.append(f"domain_name IN ({ph})")
         params.extend(allowed)
-    if role in ("emergency_responder", "operator"):
+    # Critical-only filtering for maintenance
+    if role == "maintenance":
         conditions.append("is_critical = 1")
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
@@ -621,6 +719,10 @@ def dashboard_data(authorization: Optional[str] = Header(None)):
                 generation += d.get("solar_power_w", 0)
                 if "aqi" in d:
                     aqi = d["aqi"]
+        # Estimate power bill: ₹8/kWh, assume reading = current watts, 24h/day avg
+        daily_kwh = consumption / 1000 * 24
+        monthly_kwh = daily_kwh * 30
+        est_bill = round(monthly_kwh * 8, 0)
         personal = {
             "consumption_w": round(consumption, 1),
             "generation_w": round(generation, 1),
@@ -628,6 +730,8 @@ def dashboard_data(authorization: Optional[str] = Header(None)):
             "aqi": aqi,
             "node_count": len(my_nodes),
             "my_nodes": my_nodes,
+            "est_daily_kwh": round(daily_kwh, 2),
+            "est_monthly_bill_inr": est_bill,
         }
 
     return {
@@ -648,8 +752,8 @@ def dashboard_data(authorization: Optional[str] = Header(None)):
         },
         "recent_telemetry": recent,
         "personal": personal,
-        "alerts": [],
-        "alerts_note": "Alerts integration pending",
+        "alerts": _get_recent_alerts(user, allowed),
+        "alerts_note": "Connected to Alert Manager",
         "generated_at": datetime.now().isoformat(),
     }
 
@@ -767,8 +871,49 @@ def ctrl_remove_node(req: RemoveNodeReq, authorization: Optional[str] = Header(N
     return _proxy_ingestion("/control/remove-node", "POST", {"node_id": req.node_id})
 
 
+# ═══════════════════════════════════════════
+# HLD Scaling Proxy
+# ═══════════════════════════════════════════
+
+class ScaleCPUReq(BM):
+    new_count: int
+
+@app.post("/api/v1/hld/scale-cpu", tags=["hld"])
+def hld_scale_cpu(req: ScaleCPUReq, authorization: Optional[str] = Header(None)):
+    user = _extract_user(authorization)
+    _require(user, "config.manage")
+    return _proxy_ingestion("/hld/scale-cpu", "POST", {"new_count": req.new_count})
+
+
+# ═══════════════════════════════════════════
+# Alert Manager Proxies
+# ═══════════════════════════════════════════
+
+ALERT_MGR_URL = os.getenv("ALERT_MANAGER_URL", "http://127.0.0.1:8008")
+
+def _proxy_alert_mgr(path):
+    import requests as req
+    try:
+        r = req.get(f"{ALERT_MGR_URL}{path}", timeout=5)
+        return r.json()
+    except:
+        return {"error": "Alert Manager unreachable", "alerts": [], "stats": {}}
+
+@app.get("/api/v1/alerts/recent", tags=["alerts"])
+def proxy_recent_alerts(authorization: Optional[str] = Header(None)):
+    user = _extract_user(authorization)
+    _require(user, "alerts.read")
+    return _proxy_alert_mgr("/alerts/recent")
+
+@app.get("/api/v1/alerts/stats", tags=["alerts"])
+def proxy_alert_stats(authorization: Optional[str] = Header(None)):
+    user = _extract_user(authorization)
+    _require(user, "alerts.read")
+    return _proxy_alert_mgr("/alerts/stats")
+
+
 if __name__ == "__main__":
     print(f"\n{'='*60}")
-    print(f"  Access Management Gateway v3 — Port {SERVER_PORT}")
+    print(f"  Access Management Gateway v4 — Port {SERVER_PORT}")
     print(f"{'='*60}\n")
     uvicorn.run(app, host="0.0.0.0", port=SERVER_PORT)

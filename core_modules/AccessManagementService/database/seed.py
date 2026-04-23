@@ -1,11 +1,13 @@
 """
-database/seed.py — Database Seed Data (v2 — with resident node mapping).
+database/seed.py — Database Seed Data (v3 — 7 roles, 9 users).
 
 Seeds all reference tables on first run:
-  - 10 roles with permissions & domain access
+  - 7 roles with permissions & domain access
   - 3 domains (energy, ehs, cam) with node types
-  - 12 default users (including 3 residents with personal nodes)
+  - 9 default users (including 3 residents with personal nodes)
   - User-node mapping for residents
+
+Roles: admin, energy_manager, ehs_manager, analyst, maintenance, researcher, resident
 
 Resident Node Mapping:
   - resident_arjun  → R1-SOL-001, R1-MTR-001, R1-BAT-001, R1-AC-001, R1-AQI-001
@@ -23,21 +25,18 @@ def hash_password(password: str) -> str:
 
 
 # ═══════════════════════════════════════════
-# ROLE DEFINITIONS
+# ROLE DEFINITIONS (7 roles)
 # ═══════════════════════════════════════════
 
 ROLES = [
     # (role_name, label, icon, can_see_pii, can_manage_users, data_retention_days)
-    ("admin",                "System Administrator",    "🛡️", 1, 1, None),
-    ("campus_manager",       "Campus Manager",          "🏛️", 0, 0, 90),
-    ("energy_manager",       "Energy Manager",          "⚡",  0, 0, 90),
-    ("ehs_manager",          "EHS Manager",             "🌿",  0, 0, 90),
-    ("analyst",              "Data Analyst",            "📊",  0, 0, 90),
-    ("maintenance",          "Maintenance Engineer",    "🔧",  0, 0, 30),
-    ("researcher",           "Researcher",              "🔬",  0, 0, 30),
-    ("resident",             "Resident",                "🏠",  0, 0, 7),
-    ("emergency_responder",  "Emergency Responder",     "🚨",  0, 0, 7),
-    ("operator",             "IoT Operator",            "📡",  0, 0, 30),
+    ("admin",            "System Administrator",    "🛡️", 1, 1, None),
+    ("energy_manager",   "Energy Manager",          "⚡",  0, 0, 90),
+    ("ehs_manager",      "EHS Manager",             "🌿",  0, 0, 90),
+    ("analyst",          "Data Analyst",            "📊",  0, 0, 90),
+    ("maintenance",      "Maintenance Engineer",    "🔧",  0, 0, 30),
+    ("researcher",       "Researcher",              "🔬",  0, 0, 30),
+    ("resident",         "Resident",                "🏠",  0, 0, 7),
 ]
 
 ROLE_PERMISSIONS = {
@@ -47,10 +46,6 @@ ROLE_PERMISSIONS = {
         "alerts.read", "alerts.manage",
         "dashboard.full", "config.manage",
         "system.health", "system.logs",
-    ],
-    "campus_manager": [
-        "telemetry.read", "alerts.read", "alerts.manage",
-        "dashboard.full", "config.manage",
     ],
     "energy_manager": [
         "telemetry.read", "alerts.read", "alerts.manage",
@@ -73,28 +68,18 @@ ROLE_PERMISSIONS = {
     ],
     "resident": [
         "telemetry.read", "alerts.read",
-        "dashboard.personal",
-    ],
-    "emergency_responder": [
-        "telemetry.read", "alerts.read", "dashboard.emergency",
-    ],
-    "operator": [
-        "telemetry.read",
-        "alerts.read", "dashboard.health", "system.health",
+        "dashboard.personal", "nodes.manage_own",
     ],
 }
 
 ROLE_DOMAINS = {
-    "admin":                ["energy", "ehs", "cam", "system"],
-    "campus_manager":       ["energy", "ehs", "cam"],
-    "energy_manager":       ["energy"],
-    "ehs_manager":          ["ehs"],
-    "analyst":              ["energy", "ehs", "cam"],
-    "maintenance":          ["energy", "ehs"],
-    "researcher":           ["energy", "ehs"],
-    "resident":             ["energy", "ehs"],
-    "emergency_responder":  ["energy", "ehs"],
-    "operator":             ["energy", "ehs", "cam"],
+    "admin":            ["energy", "ehs", "cam", "system"],
+    "energy_manager":   ["energy"],
+    "ehs_manager":      ["ehs"],
+    "analyst":          ["energy", "ehs", "cam"],
+    "maintenance":      ["energy", "ehs"],
+    "researcher":       ["energy", "ehs"],
+    "resident":         ["energy", "ehs"],
 }
 
 
@@ -134,22 +119,19 @@ NODE_TYPES = {
 
 
 # ═══════════════════════════════════════════
-# DEFAULT USERS (12 users — including 3 residents)
+# DEFAULT USERS (9 users)
 # ═══════════════════════════════════════════
 
 DEFAULT_USERS = [
-    ("admin",            "admin123",    "admin",                "System Admin",         "admin@smartcity.edu"),
-    ("manager_priya",    "manager123",  "campus_manager",       "Dr. Priya Sharma",     "priya@smartcity.edu"),
-    ("energy_raghuram",  "energy123",   "energy_manager",       "Raghuram K.",          "raghuram@smartcity.edu"),
-    ("ehs_saicharan",    "ehs123",      "ehs_manager",          "Saicharan P.",         "saicharan@smartcity.edu"),
-    ("analyst_vikram",   "analyst123",  "analyst",              "Vikram Reddy",         "vikram@smartcity.edu"),
-    ("maint_raju",       "maint123",    "maintenance",          "Raju Kumar",           "raju@smartcity.edu"),
-    ("researcher_ananya","research123", "researcher",           "Dr. Ananya Iyer",      "ananya@smartcity.edu"),
-    ("resident_arjun",   "resident123", "resident",             "Arjun Kumar",          "arjun@smartcity.edu"),
-    ("resident_meera",   "resident123", "resident",             "Meera Sharma",         "meera@smartcity.edu"),
-    ("resident_kiran",   "resident123", "resident",             "Kiran Patel",          "kiran@smartcity.edu"),
-    ("responder_reddy",  "respond123",  "emergency_responder",  "Inspector Reddy",      "responder@smartcity.edu"),
-    ("operator_tech",    "operator123", "operator",             "Nikhil Tech",          "nikhil@smartcity.edu"),
+    ("admin",            "admin123",    "admin",            "System Admin",         "admin@smartcity.edu"),
+    ("energy_raghuram",  "energy123",   "energy_manager",   "Raghuram K.",          "raghuram@smartcity.edu"),
+    ("ehs_saicharan",    "ehs123",      "ehs_manager",      "Saicharan P.",         "saicharan@smartcity.edu"),
+    ("analyst_vikram",   "analyst123",  "analyst",          "Vikram Reddy",         "vikram@smartcity.edu"),
+    ("maint_raju",       "maint123",    "maintenance",      "Raju Kumar",           "raju@smartcity.edu"),
+    ("researcher_ananya","research123", "researcher",       "Dr. Ananya Iyer",      "ananya@smartcity.edu"),
+    ("resident_arjun",   "resident123", "resident",         "Arjun Kumar",          "arjun@smartcity.edu"),
+    ("resident_meera",   "resident123", "resident",         "Meera Sharma",         "meera@smartcity.edu"),
+    ("resident_kiran",   "resident123", "resident",         "Kiran Patel",          "kiran@smartcity.edu"),
 ]
 
 

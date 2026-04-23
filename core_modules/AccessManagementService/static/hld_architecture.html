@@ -10,87 +10,84 @@
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
         body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 20% 0%,rgba(99,102,241,.06),transparent 40%),radial-gradient(ellipse at 80% 100%,rgba(34,211,238,.04),transparent 40%)}
-        .app{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:16px}
-
-        .header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px}
-        .header h1{font-size:1rem;font-weight:900;letter-spacing:-.5px}
-        .header-links{display:flex;gap:6px}
-        .header-links a{padding:4px 10px;border-radius:100px;border:1px solid var(--border);color:var(--accent2);font-size:.65rem;font-weight:600;text-decoration:none;transition:all .2s}
+        .app{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:14px}
+        .header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px}
+        .header h1{font-size:.9rem;font-weight:900;letter-spacing:-.5px}
+        .header-links{display:flex;gap:5px}
+        .header-links a{padding:3px 8px;border-radius:100px;border:1px solid var(--border);color:var(--accent2);font-size:.6rem;font-weight:600;text-decoration:none;transition:all .2s}
         .header-links a:hover{background:rgba(99,102,241,.1)}
-        .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:pulse 1.5s infinite}
+        .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px;animation:pulse 1.5s infinite}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
-        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-        .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-        .grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
-
-        .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
-        .panel h2{font-size:.78rem;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.5px}
-        .panel h2 .dot{width:5px;height:5px;border-radius:50%;background:var(--accent)}
-
-        .metric{text-align:center;padding:12px 6px;border-radius:12px;background:rgba(255,255,255,.015);border:1px solid var(--border);transition:all .3s}
+        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+        .grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+        .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
+        .panel h2{font-size:.72rem;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.4px}
+        .panel h2 .dot{width:4px;height:4px;border-radius:50%;background:var(--accent)}
+        .metric{text-align:center;padding:10px 4px;border-radius:10px;background:rgba(255,255,255,.015);border:1px solid var(--border);transition:all .3s}
         .metric:hover{border-color:var(--accent);transform:translateY(-1px)}
-        .metric .mv{font-size:1.6rem;font-weight:900;letter-spacing:-1px;line-height:1}
-        .metric .ml{font-size:.55rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
-        .metric .md{font-size:.6rem;color:var(--sub);margin-top:2px}
-
-        .bar-h{height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:4px}
-        .bar-h .fill{height:100%;border-radius:3px;transition:width .5s ease}
-
-        .arch-diagram{padding:16px;text-align:center}
-        .arch-row{display:flex;justify-content:center;align-items:center;gap:12px;margin:8px 0;flex-wrap:wrap}
-        .arch-box{padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-size:.7rem;font-weight:700;min-width:100px;text-align:center;transition:all .3s}
+        .metric .mv{font-size:1.4rem;font-weight:900;letter-spacing:-1px;line-height:1}
+        .metric .ml{font-size:.5rem;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
+        .metric .md{font-size:.55rem;color:var(--sub);margin-top:1px}
+        .bar-h{height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:4px}
+        .bar-h .fill{height:100%;border-radius:4px;transition:width .5s ease}
+        .cpu-bar{height:24px;border-radius:6px;background:rgba(255,255,255,.04);overflow:hidden;position:relative;margin:6px 0}
+        .cpu-bar .fill{height:100%;border-radius:6px;transition:width .5s ease}
+        .cpu-bar .label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;z-index:1}
+        .arch-diagram{padding:12px;text-align:center}
+        .arch-row{display:flex;justify-content:center;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap}
+        .arch-box{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-size:.65rem;font-weight:700;min-width:90px;text-align:center;transition:all .3s}
         .arch-box:hover{border-color:var(--accent);transform:scale(1.02)}
-        .arch-box .ab-label{font-size:.55rem;color:var(--muted);margin-top:2px}
-        .arch-box .ab-val{font-size:.9rem;font-weight:900}
-        .arch-arrow{color:var(--muted);font-size:1.2rem}
-        .arch-box.active{border-color:var(--green);box-shadow:0 0 12px rgba(16,185,129,.15)}
-        .arch-box.warn{border-color:var(--yellow);box-shadow:0 0 12px rgba(245,158,11,.15)}
-        .arch-box.crit{border-color:var(--red);box-shadow:0 0 12px rgba(239,68,68,.15)}
-
-        .ctrl-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
-        .ctrl-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);font-size:.7rem;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
-        .ctrl-btn:hover{background:rgba(99,102,241,.1);border-color:var(--accent)}
-        .ctrl-btn.green{border-color:rgba(16,185,129,.3);color:var(--green)}
-        .ctrl-btn.red{border-color:rgba(239,68,68,.3);color:var(--red)}
-        .ctrl-btn.cyan{border-color:rgba(34,211,238,.3);color:var(--cyan)}
-
-        .slider-row{display:flex;align-items:center;gap:8px}
-        .slider-row label{font-size:.68rem;font-weight:600;color:var(--sub);min-width:80px}
-        .slider-row input[type=range]{-webkit-appearance:none;flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.08);outline:none}
-        .slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent2);cursor:pointer;box-shadow:0 2px 6px rgba(99,102,241,.3)}
-        .slider-row .sv{font-size:.75rem;font-weight:800;color:var(--accent2);min-width:40px;text-align:right}
-
-        .timeline{max-height:120px;overflow-y:auto;font-size:.6rem;font-family:'SF Mono',monospace;color:var(--sub);line-height:1.6;padding:6px;background:rgba(0,0,0,.4);border-radius:6px;margin-top:6px}
-        .timeline div{border-bottom:1px solid rgba(255,255,255,.02);padding:1px 0}
-
-        .sparkline{display:flex;align-items:flex-end;gap:1px;height:30px}
+        .arch-box .ab-label{font-size:.5rem;color:var(--muted);margin-top:1px}
+        .arch-box .ab-val{font-size:.85rem;font-weight:900}
+        .arch-arrow{color:var(--muted);font-size:1rem}
+        .arch-box.active{border-color:var(--green);box-shadow:0 0 10px rgba(16,185,129,.12)}
+        .arch-box.warn{border-color:var(--yellow);box-shadow:0 0 10px rgba(245,158,11,.12)}
+        .arch-box.crit{border-color:var(--red);box-shadow:0 0 10px rgba(239,68,68,.12);animation:glow 1.5s infinite}
+        @keyframes glow{0%,100%{box-shadow:0 0 10px rgba(239,68,68,.12)}50%{box-shadow:0 0 20px rgba(239,68,68,.25)}}
+        .ctrl-row{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center}
+        .btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);font-size:.62rem;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+        .btn:hover{background:rgba(99,102,241,.1);border-color:var(--accent)}
+        .btn-green{border-color:rgba(16,185,129,.3);color:var(--green)}
+        .btn-red{border-color:rgba(239,68,68,.3);color:var(--red)}
+        .btn-cyan{border-color:rgba(34,211,238,.3);color:var(--cyan)}
+        .btn-orange{border-color:rgba(249,115,22,.3);color:var(--orange)}
+        .slider-row{display:flex;align-items:center;gap:6px}
+        .slider-row label{font-size:.62rem;font-weight:600;color:var(--sub);min-width:70px}
+        .slider-row input[type=range]{-webkit-appearance:none;flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.08);outline:none}
+        .slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent2);cursor:pointer}
+        .slider-row .sv{font-size:.68rem;font-weight:800;color:var(--accent2);min-width:35px;text-align:right}
+        .log{max-height:100px;overflow-y:auto;font-size:.55rem;font-family:'SF Mono',monospace;color:var(--sub);line-height:1.5;padding:5px;background:rgba(0,0,0,.4);border-radius:5px;margin-top:4px}
+        .log div{border-bottom:1px solid rgba(255,255,255,.02);padding:1px 0}
+        .sparkline{display:flex;align-items:flex-end;gap:1px;height:28px}
         .sparkline .bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
+        .alert-feed{max-height:150px;overflow-y:auto}
+        .alert-item{display:flex;align-items:center;gap:5px;padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.02);font-size:.58rem}
+        .alert-item .sev{font-size:.65rem}
+        .alert-item .msg{flex:1;color:var(--sub)}
+        .alert-item .ts{color:var(--muted);font-size:.5rem}
+        .warning-banner{padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:.68rem;font-weight:700;display:flex;align-items:center;gap:6px}
+        .warning-banner.warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:var(--yellow)}
+        .warning-banner.crit{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:var(--red)}
         .hidden{display:none!important}
-
-        .login-wrap{max-width:400px;margin:100px auto;text-align:center}
-        .login-title{font-size:1.4rem;font-weight:900;margin-bottom:6px}
-        .login-sub{color:var(--muted);font-size:.75rem;margin-bottom:20px}
-        .login-btn{display:inline-block;padding:12px 24px;margin:6px;border-radius:12px;background:var(--card);border:1px solid var(--border);cursor:pointer;transition:all .2s}
+        .login-wrap{max-width:400px;margin:80px auto;text-align:center}
+        .login-btn{display:inline-block;padding:10px 20px;margin:5px;border-radius:10px;background:var(--card);border:1px solid var(--border);cursor:pointer;transition:all .2s}
         .login-btn:hover{border-color:var(--accent);transform:translateY(-2px)}
-        .login-btn .lb-name{font-size:.85rem;font-weight:800}
-        .login-btn .lb-sub{font-size:.6rem;color:var(--muted)}
-
+        .login-btn .lb-name{font-size:.8rem;font-weight:800}
+        .login-btn .lb-sub{font-size:.55rem;color:var(--muted)}
         @media(max-width:768px){.grid2,.grid3{grid-template-columns:1fr}.arch-row{flex-direction:column}}
     </style>
 </head>
 <body>
 <div class="app">
-    <!-- LOGIN -->
     <div id="loginView" class="login-wrap">
-        <div style="font-size:2.5rem;margin-bottom:6px">🏗️</div>
-        <div class="login-title">HLD Architecture Monitor</div>
-        <div class="login-sub">Live system observability — CPU, memory, workers, throughput</div>
-        <div class="login-btn" onclick="quickLogin('admin','admin123')"><div class="lb-name">🛡️ System Admin</div><div class="lb-sub">Full access</div></div>
-        <div class="login-btn" onclick="quickLogin('manager_priya','manager123')"><div class="lb-name">🏛️ Campus Manager</div><div class="lb-sub">manager_priya</div></div>
+        <div style="font-size:2.2rem;margin-bottom:4px">🏗️</div>
+        <div style="font-size:1.2rem;font-weight:900;margin-bottom:4px">HLD Architecture Monitor</div>
+        <div style="color:var(--muted);font-size:.68rem;margin-bottom:14px">Live CPU/memory monitoring · Auto-scaling · Alert feed</div>
+        <div class="login-btn" onclick="quickLogin('admin','admin123')"><div class="lb-name">🛡️ Admin</div><div class="lb-sub">Full access</div></div>
+        <div class="login-btn" onclick="quickLogin('energy_raghuram','energy123')"><div class="lb-name">⚡ Energy Mgr</div><div class="lb-sub">energy_raghuram</div></div>
     </div>
 
-    <!-- HLD VIEW -->
     <div id="hldView" class="hidden">
         <header class="header">
             <h1><span class="live-dot"></span>🏗️ HLD Architecture — Live Monitor</h1>
@@ -100,6 +97,23 @@
                 <a href="#" onclick="doLogout()">🔄 Switch</a>
             </div>
         </header>
+
+        <!-- CPU WARNING BANNER -->
+        <div id="cpuBanner" class="hidden"></div>
+
+        <!-- CPU SIMULATION -->
+        <div class="panel">
+            <h2><span class="dot"></span>CPU Simulation (Fixed <span id="cpuCountDisplay">4</span> cores)</h2>
+            <div class="cpu-bar" id="cpuBar"><div class="fill" style="width:0%;background:var(--green)"></div><div class="label" id="cpuLabel">0%</div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                <div style="font-size:.55rem;color:var(--muted)">⚠️ Warning: 70% | 🔴 Critical: 85% | Auto-alerts enabled</div>
+                <div style="display:flex;gap:4px">
+                    <button class="btn btn-orange" onclick="scaleCPU(HLD_CPU+2)">⚡ Scale +2 CPU</button>
+                    <button class="btn btn-orange" onclick="scaleCPU(HLD_CPU+4)">⚡ Scale +4 CPU</button>
+                    <button class="btn btn-red" onclick="scaleCPU(4)">🔄 Reset to 4</button>
+                </div>
+            </div>
+        </div>
 
         <!-- SYSTEM METRICS -->
         <div class="panel">
@@ -118,54 +132,52 @@
             <div class="panel">
                 <h2><span class="dot"></span>Engine Throughput</h2>
                 <div class="grid3" id="throughputMetrics">Loading...</div>
-                <div style="margin-top:8px;font-size:.62rem;color:var(--muted)">Ingestion latency (last 30 polls):</div>
+                <div style="margin-top:6px;font-size:.55rem;color:var(--muted)">Latency (30 polls):</div>
                 <div class="sparkline" id="latencySparkline"></div>
             </div>
 
-            <!-- NODE SCALING CONTROLS -->
+            <!-- SCALING CONTROLS -->
             <div class="panel">
                 <h2><span class="dot"></span>Dynamic Scaling Controls</h2>
-                <div class="slider-row" style="margin-bottom:8px">
+                <div class="slider-row" style="margin-bottom:6px">
                     <label>Data Rate</label>
                     <input type="range" id="intervalSlider" min="0.3" max="5" step="0.1" value="1.5" oninput="document.getElementById('intDisp').textContent=this.value+'s'">
                     <span class="sv" id="intDisp">1.5s</span>
-                    <button class="ctrl-btn" onclick="applyInterval()">Apply</button>
+                    <button class="btn" onclick="applyInterval()">Apply</button>
                 </div>
                 <div class="ctrl-row">
-                    <button class="ctrl-btn green" onclick="addNodes(5)">➕ Add 5 Nodes</button>
-                    <button class="ctrl-btn green" onclick="addNodes(10)">➕ Add 10</button>
-                    <button class="ctrl-btn green" onclick="addNodes(20)">➕ Add 20</button>
-                    <button class="ctrl-btn cyan" onclick="addNodes(50)">⚡ Add 50 (Stress)</button>
+                    <button class="btn btn-green" onclick="addNodes(5)">➕ 5 Nodes</button>
+                    <button class="btn btn-green" onclick="addNodes(10)">➕ 10</button>
+                    <button class="btn btn-green" onclick="addNodes(20)">➕ 20</button>
+                    <button class="btn btn-cyan" onclick="addNodes(50)">⚡ 50 (Stress)</button>
                 </div>
                 <div class="ctrl-row">
-                    <select id="nodeTypeSelect" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-size:.68rem;font-family:inherit">
-                        <option value="solar_panel">Solar Panel</option>
-                        <option value="smart_meter">Smart Meter</option>
-                        <option value="battery_storage">Battery</option>
-                        <option value="air_quality">Air Quality</option>
-                        <option value="water_quality">Water Quality</option>
-                        <option value="noise_monitor">Noise Monitor</option>
-                    </select>
-                    <select id="nodeDomainSelect" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-size:.68rem;font-family:inherit">
-                        <option value="energy">energy</option>
-                        <option value="ehs">ehs</option>
+                    <select id="nodeTypeSelect" style="padding:4px 6px;border-radius:5px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-size:.6rem;font-family:inherit">
+                        <option value="solar_panel">Solar Panel</option><option value="smart_meter">Smart Meter</option><option value="battery_storage">Battery</option><option value="air_quality">Air Quality</option>
                     </select>
                 </div>
-                <div class="timeline" id="scaleLog"></div>
+                <div class="log" id="scaleLog"></div>
             </div>
         </div>
 
-        <!-- FLEET BREAKDOWN -->
+        <div class="grid2">
+            <!-- ALERT FEED -->
+            <div class="panel">
+                <h2><span class="dot"></span>🔔 Live Alerts (<span id="alertCount">0</span>)</h2>
+                <div class="alert-feed" id="alertFeed"><div style="text-align:center;padding:10px;color:var(--muted);font-size:.65rem">No alerts yet — add nodes to trigger emergency conditions</div></div>
+            </div>
+
+            <!-- SCALE HISTORY -->
+            <div class="panel">
+                <h2><span class="dot"></span>CPU Scale History</h2>
+                <div id="scaleHistory" style="font-size:.6rem;color:var(--sub)">No scaling events</div>
+            </div>
+        </div>
+
+        <!-- FLEET -->
         <div class="panel">
             <h2><span class="dot"></span>Fleet — Node Distribution (<span id="fleetTotal">0</span> nodes)</h2>
             <div class="grid4" id="fleetBreakdown">Loading...</div>
-        </div>
-
-        <!-- ENGINE REPORT -->
-        <div class="panel">
-            <h2><span class="dot"></span>Engine Report</h2>
-            <div style="margin-bottom:8px"><button class="ctrl-btn" onclick="loadReport()">📄 Generate Full Report</button></div>
-            <div id="reportArea"></div>
         </div>
     </div>
 </div>
@@ -174,6 +186,7 @@
 const API='';
 let TOKEN=localStorage.getItem('hld_token');
 const latencyHistory=[];
+let HLD_CPU=4;
 
 async function quickLogin(u,p){
     const res=await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
@@ -187,189 +200,173 @@ function doLogout(){TOKEN=null;localStorage.removeItem('hld_token');document.get
 async function authFetch(url){const r=await fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}});if(r.status===401)doLogout();return r}
 async function authPost(url,body){return fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},body:JSON.stringify(body)})}
 
-function slog(msg){
-    const el=document.getElementById('scaleLog');
-    const t=new Date().toLocaleTimeString();
-    el.innerHTML=`<div>${t} — ${msg}</div>`+el.innerHTML;
-    if(el.children.length>30)el.removeChild(el.lastChild);
-}
-
-function metricCard(label,value,color,detail=''){
-    return `<div class="metric"><div class="mv" style="color:${color}">${value}</div><div class="ml">${label}</div>${detail?`<div class="md">${detail}</div>`:''}</div>`;
-}
+function slog(msg){const el=document.getElementById('scaleLog');const t=new Date().toLocaleTimeString();el.innerHTML=`<div>${t} — ${msg}</div>`+el.innerHTML;if(el.children.length>25)el.removeChild(el.lastChild)}
+function mc(label,value,color,detail=''){return `<div class="metric"><div class="mv" style="color:${color}">${value}</div><div class="ml">${label}</div>${detail?`<div class="md">${detail}</div>`:''}</div>`}
 
 async function refreshSystem(){
     try{
         const r=await authFetch(`${API}/api/v1/engine-health`);const d=await r.json();
-        const sys=d.system||{};
-        const el=document.getElementById('sysMetrics');
+        const sys=d.system||{};const hld=d.hld||{};
+        HLD_CPU=sys.cpu_count||4;
+        const cpuPct=sys.cpu_usage_pct||0;
+        const cpuStatus=sys.cpu_status||'NORMAL';
 
-        const cpuColor=sys.cpu_usage_pct>80?'var(--red)':sys.cpu_usage_pct>50?'var(--yellow)':'var(--green)';
+        // CPU Count display
+        document.getElementById('cpuCountDisplay').textContent=HLD_CPU;
+
+        // CPU Bar
+        const cpuColor=cpuStatus==='CRITICAL'?'var(--red)':cpuStatus==='WARNING'?'var(--yellow)':'var(--green)';
+        const barEl=document.getElementById('cpuBar');
+        barEl.querySelector('.fill').style.width=Math.min(100,cpuPct)+'%';
+        barEl.querySelector('.fill').style.background=cpuColor;
+        document.getElementById('cpuLabel').textContent=`${cpuPct}% — ${HLD_CPU} CPUs — ${cpuStatus}`;
+
+        // Warning Banner
+        const banner=document.getElementById('cpuBanner');
+        if(cpuStatus==='CRITICAL'){
+            banner.className='warning-banner crit';
+            banner.innerHTML=`🔴 CRITICAL: CPU usage at ${cpuPct}% — System overloaded! Scale up immediately to prevent data loss.`;
+            banner.classList.remove('hidden');
+        }else if(cpuStatus==='WARNING'){
+            banner.className='warning-banner warn';
+            banner.innerHTML=`⚠️ WARNING: CPU usage at ${cpuPct}% — Approaching capacity. Consider scaling up CPU resources.`;
+            banner.classList.remove('hidden');
+        }else{
+            banner.classList.add('hidden');
+        }
+
+        // System Metrics
         const memColor=sys.memory_mb>500?'var(--yellow)':'var(--green)';
-
-        el.innerHTML=
-            metricCard('CPU Cores',sys.cpu_count||'?','var(--cyan)','Physical cores')+
-            metricCard('CPU Usage',sys.cpu_usage_pct+'%',cpuColor,`Load: ${sys.load_avg_1m}`)+
-            metricCard('Memory',sys.memory_mb+'MB',memColor,'Process RSS')+
-            metricCard('Threads',sys.thread_count||'?','var(--accent2)','Active threads')+
-            metricCard('DB Size',sys.db_size_mb+'MB','var(--orange)','SQLite WAL')+
-            metricCard('PID',sys.pid||'?','var(--muted)','Process ID');
+        document.getElementById('sysMetrics').innerHTML=
+            mc('CPU Cores',HLD_CPU,'var(--cyan)',`Fixed allocation`)+
+            mc('CPU Usage',cpuPct+'%',cpuColor,cpuStatus)+
+            mc('Memory',sys.memory_mb+'MB',memColor,'Process RSS')+
+            mc('Threads',sys.thread_count||'?','var(--accent2)','Active')+
+            mc('DB Size',sys.db_size_mb+'MB','var(--orange)','SQLite WAL')+
+            mc('Nodes',sys.active_nodes||0,'var(--cyan)','Active');
 
         // Throughput
-        const tp=document.getElementById('throughputMetrics');
-        tp.innerHTML=
-            metricCard('Records/sec',d.records_per_second,'var(--cyan)','Throughput')+
-            metricCard('Total Ingested',(d.total_ingested||0).toLocaleString(),'var(--accent2)','All time')+
-            metricCard('Avg Latency',d.avg_latency_ms+'ms',d.avg_latency_ms>50?'var(--red)':'var(--green)','Per ingest');
+        document.getElementById('throughputMetrics').innerHTML=
+            mc('Records/sec',d.records_per_second,'var(--cyan)','Throughput')+
+            mc('Total',(d.total_ingested||0).toLocaleString(),'var(--accent2)','All time')+
+            mc('Avg Latency',d.avg_latency_ms+'ms',d.avg_latency_ms>50?'var(--red)':'var(--green)','Per ingest');
 
-        // Latency sparkline
+        // Sparkline
         latencyHistory.push(d.avg_latency_ms||0);
         if(latencyHistory.length>30)latencyHistory.shift();
         const maxL=Math.max(...latencyHistory,1);
-        const spark=document.getElementById('latencySparkline');
-        spark.innerHTML=latencyHistory.map(l=>{
-            const h=Math.max(3,l/maxL*28);
+        document.getElementById('latencySparkline').innerHTML=latencyHistory.map(l=>{
+            const h=Math.max(3,l/maxL*26);
             const c=l>50?'var(--red)':l>20?'var(--yellow)':'var(--green)';
             return `<div class="bar" style="height:${h}px;background:${c}"></div>`;
         }).join('');
 
-        // Architecture diagram
-        renderArchDiagram(d,sys);
-
-        // Sync interval slider
+        // Sync interval
         document.getElementById('intervalSlider').value=d.interval||1.5;
         document.getElementById('intDisp').textContent=(d.interval||1.5)+'s';
+
+        // Scale history
+        const hist=hld.scale_history||[];
+        if(hist.length>0){
+            document.getElementById('scaleHistory').innerHTML=hist.map(h=>`<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03)">${h.time?new Date(h.time).toLocaleTimeString():''} — ${h.action}: ${h.old} → ${h.new} CPUs</div>`).join('');
+        }
+
+        // Architecture diagram
+        renderArchDiagram(d,sys);
     }catch(e){console.error(e)}
 }
 
 function renderArchDiagram(d,sys){
-    const nodes=d.active_nodes||0;
+    const nodes=sys.active_nodes||0;
     const rps=d.records_per_second||0;
-    const cpuCls=sys.cpu_usage_pct>80?'crit':sys.cpu_usage_pct>50?'warn':'active';
+    const cpuCls=sys.cpu_status==='CRITICAL'?'crit':sys.cpu_status==='WARNING'?'warn':'active';
     const rpsCls=rps>30?'crit':rps>15?'warn':'active';
-
     document.getElementById('archDiagram').innerHTML=`
         <div class="arch-row">
-            <div class="arch-box ${nodes>60?'warn':'active'}">
-                <div>📡 IoT Nodes</div>
-                <div class="ab-val">${nodes}</div>
-                <div class="ab-label">Active Sensors</div>
-            </div>
+            <div class="arch-box ${nodes>40?'warn':'active'}"><div>📡 IoT Nodes</div><div class="ab-val">${nodes}</div><div class="ab-label">Active Sensors</div></div>
             <div class="arch-arrow">→</div>
-            <div class="arch-box ${rpsCls}">
-                <div>📥 Data Stream</div>
-                <div class="ab-val">${rps} rec/s</div>
-                <div class="ab-label">Interval: ${d.interval||1.5}s</div>
-            </div>
+            <div class="arch-box ${rpsCls}"><div>📥 Stream</div><div class="ab-val">${rps} rec/s</div><div class="ab-label">${d.interval||1.5}s interval</div></div>
         </div>
+        <div class="arch-row"><div class="arch-arrow" style="transform:rotate(90deg)">→</div></div>
         <div class="arch-row">
-            <div class="arch-arrow" style="transform:rotate(90deg)">→</div>
-        </div>
-        <div class="arch-row">
-            <div class="arch-box active">
-                <div>🔄 Ingestion Service</div>
-                <div class="ab-val">Port ${d.worker_id||'w0'}</div>
-                <div class="ab-label">Worker ${d.worker_id}</div>
-            </div>
+            <div class="arch-box active"><div>🔄 Ingestion :8006</div><div class="ab-val">Worker ${d.worker_id||'w0'}</div><div class="ab-label">Store + Detect</div></div>
             <div class="arch-arrow">→</div>
-            <div class="arch-box active">
-                <div>🗄️ SQLite DB</div>
-                <div class="ab-val">${sys.db_size_mb}MB</div>
-                <div class="ab-label">${(d.total_ingested||0).toLocaleString()} records</div>
-            </div>
+            <div class="arch-box active"><div>🗄️ SQLite</div><div class="ab-val">${sys.db_size_mb}MB</div><div class="ab-label">${(d.total_ingested||0).toLocaleString()} records</div></div>
             <div class="arch-arrow">→</div>
-            <div class="arch-box active">
-                <div>🌐 Gateway API</div>
-                <div class="ab-val">Auth + RBAC</div>
-                <div class="ab-label">12 users, 10 roles</div>
-            </div>
+            <div class="arch-box active"><div>🌐 Gateway :8005</div><div class="ab-val">RBAC</div><div class="ab-label">7 roles · 9 users</div></div>
         </div>
+        <div class="arch-row"><div class="arch-arrow" style="transform:rotate(90deg)">→</div></div>
         <div class="arch-row">
-            <div class="arch-arrow" style="transform:rotate(90deg)">→</div>
-        </div>
-        <div class="arch-row">
-            <div class="arch-box ${cpuCls}">
-                <div>🖥️ System</div>
-                <div class="ab-val">${sys.cpu_count} CPU × ${sys.cpu_usage_pct}%</div>
-                <div class="ab-label">${sys.memory_mb}MB RAM · ${sys.thread_count} threads</div>
-            </div>
-            <div class="arch-box">
-                <div>📊 Dashboards</div>
-                <div class="ab-val">5 Views</div>
-                <div class="ab-label">Manager · Analyst · Operator · Resident · HLD</div>
-            </div>
-        </div>
-    `;
+            <div class="arch-box ${cpuCls}"><div>🖥️ CPU</div><div class="ab-val">${HLD_CPU} × ${sys.cpu_usage_pct}%</div><div class="ab-label">${sys.memory_mb}MB · ${sys.thread_count} threads</div></div>
+            <div class="arch-box active"><div>🔔 Alert Mgr :8008</div><div class="ab-val">Email</div><div class="ab-label">SMTP dispatch</div></div>
+            <div class="arch-box"><div>📊 Dashboards</div><div class="ab-val">4 Views</div><div class="ab-label">Dashboard · Control · HLD · Docs</div></div>
+        </div>`;
+}
+
+async function refreshAlerts(){
+    try{
+        const r=await authFetch(`${API}/api/v1/alerts/recent`);const d=await r.json();
+        const stats=d.stats||{};
+        document.getElementById('alertCount').textContent=stats.total||0;
+        const feed=document.getElementById('alertFeed');
+        if(!d.alerts||d.alerts.length===0){
+            feed.innerHTML=`<div style="text-align:center;padding:10px;color:var(--muted);font-size:.6rem">✅ No alerts</div>`;
+            return;
+        }
+        feed.innerHTML=d.alerts.map(a=>{
+            const sev=a.severity==='EMERGENCY'?'🔴':'🟡';
+            const ts=a.timestamp?new Date(a.timestamp).toLocaleTimeString():'';
+            return `<div class="alert-item"><span class="sev">${sev}</span><span style="font-weight:700;font-size:.58rem">${a.node_id}</span><span class="msg">${a.message}</span><span class="ts">${ts}</span></div>`;
+        }).join('');
+    }catch(e){}
 }
 
 async function refreshFleet(){
     try{
         const r=await authFetch(`${API}/api/v1/fleet-status`);const d=await r.json();
         document.getElementById('fleetTotal').textContent=d.count;
-        // Group by type
         const types={};
         for(const n of d.nodes||[]){
             const t=n.type_name||'unknown';
             if(!types[t])types[t]={count:0,active:0,critical:0,domain:n.domain};
-            types[t].count++;
-            if(n.is_active)types[t].active++;
+            types[t].count++;if(n.is_active)types[t].active++;
             if(n.health&&n.health.is_critical)types[t].critical++;
         }
-        const el=document.getElementById('fleetBreakdown');
-        el.innerHTML=Object.entries(types).map(([t,v])=>{
+        document.getElementById('fleetBreakdown').innerHTML=Object.entries(types).map(([t,v])=>{
             const pct=v.count>0?Math.round(v.active/v.count*100):0;
             const color=v.critical>0?'var(--red)':pct===100?'var(--green)':'var(--yellow)';
-            return `<div class="metric">
-                <div class="mv" style="color:${color}">${v.count}</div>
-                <div class="ml">${t.replace(/_/g,' ')}</div>
-                <div class="md">${v.domain} · ${v.critical} crit</div>
-                <div class="bar-h"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
-            </div>`;
+            return `<div class="metric"><div class="mv" style="color:${color}">${v.count}</div><div class="ml">${t.replace(/_/g,' ')}</div><div class="md">${v.domain} · ${v.critical} crit</div><div class="bar-h"><div class="fill" style="width:${pct}%;background:${color}"></div></div></div>`;
         }).join('');
-    }catch(e){console.error(e)}
+    }catch(e){}
 }
 
 async function applyInterval(){
     const v=+document.getElementById('intervalSlider').value;
     await authPost(`${API}/api/v1/control/set-interval`,{interval:v});
-    slog(`⏱️ Data rate changed to ${v}s interval`);
+    slog(`⏱️ Data rate → ${v}s`);
 }
 
 async function addNodes(count){
     const nt=document.getElementById('nodeTypeSelect').value;
-    const dom=document.getElementById('nodeDomainSelect').value;
     try{
-        const r=await authPost(`${API}/api/v1/control/add-bulk-nodes`,{count,domain:dom,node_type:nt,prefix:'DYN'});
+        const r=await authPost(`${API}/api/v1/control/add-bulk-nodes`,{count,domain:nt.includes('air')?'ehs':'energy',node_type:nt,prefix:'DYN'});
         const d=await r.json();
-        slog(`➕ Added ${d.count||count} ${nt} nodes (${dom})`);
-        setTimeout(()=>{refreshFleet();refreshSystem()},2000);
+        slog(`➕ Added ${d.count||count} ${nt} nodes`);
+        setTimeout(refresh,1500);
     }catch(e){slog(`❌ Error: ${e.message}`)}
 }
 
-async function loadReport(){
+async function scaleCPU(newCount){
     try{
-        const r=await authFetch(`${API}/api/v1/engine-report`);const d=await r.json();
-        let h=`<div class="grid3" style="margin-bottom:8px">`;
-        for(const ds of d.domain_breakdown||[])
-            h+=metricCard(ds.domain_name,(ds.total||0).toLocaleString(),'var(--cyan)',`${ds.critical||0} critical`);
-        h+='</div>';
-        if(d.top_faulty_nodes&&d.top_faulty_nodes.length>0){
-            h+=`<div style="font-size:.7rem;font-weight:700;margin:6px 0 3px">⚠️ Top Faulty Nodes</div>`;
-            for(const f of d.top_faulty_nodes)
-                h+=`<div style="font-size:.62rem;color:var(--yellow);padding:1px 0">${f.node_id_str} — ${f.fault_readings} faults (${f.node_type_name})</div>`;
-        }
-        if(d.low_battery_nodes&&d.low_battery_nodes.length>0){
-            h+=`<div style="font-size:.7rem;font-weight:700;margin:6px 0 3px;color:var(--red)">🔋 Low Battery</div>`;
-            for(const b of d.low_battery_nodes)
-                h+=`<div style="font-size:.62rem;color:var(--red);padding:1px 0">${b.node_id_str} — ${b.battery}%</div>`;
-        }
-        h+=`<div style="font-size:.55rem;color:var(--muted);margin-top:6px">Generated: ${d.generated_at} | RPS: ${d.records_per_second}</div>`;
-        document.getElementById('reportArea').innerHTML=h;
-        slog('📄 Engine report generated');
-    }catch(e){document.getElementById('reportArea').innerHTML=`<span style="color:var(--red)">Error</span>`}
+        const r=await authPost(`${API}/api/v1/hld/scale-cpu`,{new_count:Math.max(1,Math.min(32,newCount))});
+        const d=await r.json();
+        slog(`⚡ CPU scaled: ${d.old_cpu} → ${d.new_cpu} cores`);
+        HLD_CPU=d.new_cpu;
+        setTimeout(refreshSystem,500);
+    }catch(e){slog(`❌ Scale error: ${e.message}`)}
 }
 
-function refresh(){refreshSystem();refreshFleet()}
+function refresh(){refreshSystem();refreshFleet();refreshAlerts()}
 if(TOKEN){document.getElementById('loginView').classList.add('hidden');document.getElementById('hldView').classList.remove('hidden');refresh()}
 setInterval(()=>{if(TOKEN)refresh()},3000);
 </script>

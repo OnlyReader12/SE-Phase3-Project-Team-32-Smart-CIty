@@ -202,3 +202,23 @@ SELECT
     u.created_at
 FROM users u
 JOIN roles r ON u.role_id = r.id;
+
+
+-- ─────────────────────────────────────
+-- ALERT LOG (populated by Alert Manager)
+-- ─────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS alert_log (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    node_id         TEXT    NOT NULL,
+    domain          TEXT    NOT NULL,
+    severity        TEXT    NOT NULL,       -- EMERGENCY, WARNING, INFO
+    alert_type      TEXT    NOT NULL,       -- aqi_critical, battery_low, etc
+    message         TEXT    NOT NULL,
+    data_json       TEXT,
+    dispatched_to   TEXT,                   -- JSON array of emails
+    created_at      TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_log_severity ON alert_log(severity);
+CREATE INDEX IF NOT EXISTS idx_alert_log_domain ON alert_log(domain);
